@@ -1,93 +1,161 @@
-# CosmoTemplate
+# Cosmo Template
 
+A working reference app that showcases the Dash + Celery + PostgreSQL + MinIO framework
+used by COSMOPOLITAN and COSMONAUT. The app demonstrates how to integrate a Python
+computation module into the framework using a CSV statistical profiler as the example.
 
+## Quick Start
 
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://codebase.helmholtz.cloud/ufz/tb5-smm/met/wg7/cosmo-template.git
-git branch -M main
-git push -uf origin main
+```bash
+./dev_up.sh
 ```
 
-## Integrate with your tools
+Open http://localhost:8080 to access the application.
 
-- [ ] [Set up project integrations](https://codebase.helmholtz.cloud/ufz/tb5-smm/met/wg7/cosmo-template/-/settings/integrations)
+Use `./dev_up.sh -d` to enable debug mode (auto-reload on code changes).
 
-## Collaborate with your team
+## Architecture
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+```
+Browser → Dash (Flask) → Celery worker → computation_module.py
+                ↕              ↕
+            PostgreSQL       MinIO
+                ↕
+              Redis (broker)
+```
 
-## Test and Deploy
+### Services (docker-compose.yml)
 
-Use the built-in continuous integration in GitLab.
+| Service | Image | Purpose |
+|---------|-------|---------|
+| `cosmo-template` | dev.Dockerfile | Dash web app (Gunicorn) |
+| `cosmo-template-worker` | worker.Dockerfile | Celery worker |
+| `postgres` | postgres:15 | Job metadata, logs, Celery results |
+| `redis` | redis:7 | Celery message broker |
+| `minio` | minio/minio | Object storage for job files |
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### Data Flow
 
-***
+1. User uploads CSV on the job submission page
+2. Job is created in PostgreSQL, CSV saved to MinIO
+3. Celery worker picks up the task, downloads CSV from MinIO
+4. `computation_module.py` runs the statistical profiler
+5. Results (JSON) saved to MinIO, job status updated in PostgreSQL
+6. Results page renders summary table, charts, and correlation heatmap
 
-# Editing this README
+### Core Modules
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+| Module | Purpose |
+|--------|---------|
+| `computation_module.py` | CSV statistical profiler (the example computation) |
+| `db_manager.py` | SQLAlchemy models: Job, LogEntry |
+| `object_storage_manager.py` | MinIO file operations via rclone |
+| `job.py` | Job lifecycle: create work dir, save files, sync MinIO |
+| `background_job_manager.py` | Celery app config, task submission |
+| `pydantic_models.py` | `ProfileConfig` — job configuration model |
+| `config.py` | Environment variable loading and validation |
 
-## Suggestions for a good README
+### Pages
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+| Page | Path | Purpose |
+|------|------|---------|
+| Home | `/` | Welcome page |
+| Job Submission | `/job-submission` | Upload CSV, configure, submit |
+| Results | `/results?job_id=...` | View profiling results |
+| Job Management | `/job-management` | List/delete jobs |
+| Logs | `/logs` | Application log viewer |
+| Worker Management | `/worker-management` | Celery worker status |
 
-## Name
-Choose a self-explaining name for your project.
+## Environment Configuration
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+Two env files:
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+- `env_dev` — local Docker development
+- `env_test` — local pytest (used by `run_pytest.sh`)
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+`dev_up.sh` copies `env_dev` to `.env` on each run.
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+## Testing
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+```bash
+# Full test suite (spins up Postgres, Redis, MinIO automatically)
+./run_pytest.sh
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+# See available flags
+./run_pytest.sh --help
+```
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+Test files in `test/`:
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+- `test_computation_module.py` — unit tests for `profile_csv()`
+- `test_e2e.py` — Playwright end-to-end test
+- `test_db_manager.py` — database operations
+- `test_env.py` — environment variable completeness
+- `test_html_id_enforcement.py` — HTML ID constant usage
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+## How to Replace the CSV Profiler With Your Own Computation
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+1. **Replace `computation_module.py`** with your own computation logic
+2. **Update `pydantic_models.py`** — change `ProfileConfig` to your config model
+3. **Update `tasks/computation_tasks.py`** — adapt the Celery task to call your module
+4. **Update `pages/job_submission.py`** — adjust the upload/form for your input format
+5. **Update `pages/results.py`** — display your computation's output
+6. **Update tests** — replace `test_computation_module.py` with tests for your module
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## Extracting Your Computation Module
 
-## License
-For open source projects, say how it is licensed.
+When your computation module grows beyond a single file, extract it into a separate
+Python package:
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+1. Create a new git repo with its own `pyproject.toml` (publishable to PyPI or a
+   private index)
+2. Add it as a dependency in this project's `pyproject.toml`
+3. Activate `docker-compose.local_pkg.yml`: update it to mount your local package
+   checkout into web and worker containers
+4. Enable `--local-computation-module` in `dev_up.sh`: remove the error guard, wire
+   it to use the compose override file
+
+See COSMOPOLITAN's `docker-compose.local-smp.yml` and COSMONAUT's
+`docker-compose.local-sr.yml` as working examples of this pattern.
+
+## Bootstrapping a New Project
+
+```bash
+./copy.sh <new_project_name> <destination_directory>
+# Example:
+./copy.sh my_awesome_app /home/user/projects/my-awesome-app
+```
+
+This copies the template, renames all references, and prints a list of branded
+files to customize (banner images, icons, home page text).
+
+## Code Quality
+
+```bash
+# Pre-commit hooks
+pre-commit install
+pre-commit run --all-files
+```
+
+## File Structure
+
+```
+cosmo_template_app/          # Main application package
+  app.py                     # Dash app initialization
+  computation_module.py      # CSV statistical profiler
+  db_manager.py              # SQLAlchemy models
+  job.py                     # Job lifecycle management
+  background_job_manager.py  # Celery configuration
+  pydantic_models.py         # ProfileConfig model
+  config.py                  # Environment variables
+  error_handling.py          # Central error handler
+  layouts.py                 # Reusable layout components
+  pages/                     # Dash pages
+  tasks/                     # Celery task definitions
+  constants/                 # HTML IDs, general constants
+  assets/                    # CSS, favicon
+  static/                    # Images, icons
+docker/                      # Dockerfiles
+test/                        # All tests
+docs/conventions/            # Coding conventions
+```

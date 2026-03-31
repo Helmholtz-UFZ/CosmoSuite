@@ -1,0 +1,20 @@
+INFO:root:rclone MinIO connectivity check passed
+DEBUG:cosmo_template_app.db_manager:Check existence of job: test
+INFO:root:Database connection successful
+INFO:root:Redis connection successful
+============================= test session starts ==============================
+platform linux -- Python 3.13.9, pytest-8.4.2, pluggy-1.6.0
+rootdir: /home/andersj/git/cosmo-template
+configfile: pyproject.toml
+testpaths: test
+plugins: playwright-0.7.2, base-url-2.1.0, dash-3.4.0
+collected 32 items
+
+test/test_background_job_manager.py .                                    [  3%]
+test/test_computation_module.py ....................                     [ 65%]
+test/test_db_manager.py .....                                            [ 81%]
+test/test_e2e.py ...                                                     [ 90%]
+test/test_env.py .                                                       [ 93%]
+test/test_html_id_enforcement.py ..                                      [100%]
+
+============================= 32 passed in 36.96s ==============================

@@ -1,0 +1,83 @@
+services:
+  cosmo-template:
+    image: cosmo-template-webserver
+    container_name: cosmo-template-webserver
+    build:
+      context: .
+      dockerfile: ./docker/dev.Dockerfile
+      network: host
+    env_file: .env
+    environment:
+      TZ: Europe/Berlin
+    user: "${DOCKER_UID}:${DOCKER_GID}"
+    ports:
+      - "${FLASK_PORT}:${FLASK_PORT}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      redis:
+        condition: service_started
+    volumes:
+      - "./:/python_docker/cosmo_template"
+      - "/python_docker/cosmo_template/.venv"
+
+  cosmo-template-worker:
+    image: cosmo-template-worker
+    container_name: cosmo-template-worker
+    build:
+      context: .
+      dockerfile: ./docker/worker.Dockerfile
+      network: host
+    env_file: .env
+    environment:
+      TZ: Europe/Berlin
+    user: "${DOCKER_UID}:${DOCKER_GID}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cosmo_template
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    image: postgres:15
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    container_name: postgres_cosmo_template
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio_cosmo_template
+    ports:
+      - "9000:9000"
+      - "9001:9001" # Web-based admin console
+    environment:
+      MINIO_ROOT_USER: accesskey
+      MINIO_ROOT_PASSWORD: secretkey
+    command: server /data --console-address ":9001"
+
+volumes:
+  redis_data:
