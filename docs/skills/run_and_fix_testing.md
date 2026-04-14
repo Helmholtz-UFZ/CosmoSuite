@@ -208,7 +208,7 @@ traces, HTML snapshots, console logs, and server logs as local runs.
 
 **Common CI-specific failures:**
 
-1. **Hardcoded hostnames or ports** — use config vars from `cosmo_template_app/config.py`, never literals
+1. **Hardcoded hostnames or ports** — use config vars from `src/config.py`, never literals
 2. **Hardcoded absolute file paths** — use paths relative to project root (e.g. `test/test_files/data.csv`)
 3. **Test assumes visible browser** — remove any `headless=False`; use fixtures, not manual browser setup
 4. **Missing test files** — check that files are committed and not in `.gitignore`
@@ -229,7 +229,7 @@ diff env_test env_test_local
 |---------|--------------|-------------------|-----|
 | `locator.click: Timeout 30000ms exceeded` | Element not visible or overlay blocking | Screenshot, trace | Add `expect().to_be_visible()` before interaction; wait for overlay to close |
 | `PostgreSQL not available` | DB container not healthy | — | Check Docker logs, verify ports in `env_test_local` |
-| `VIOLATIONS: Found id= usages with string literals` | Literal ID strings in page code | — | Replace with constants from `cosmo_template_app/constants/html_ids.py` |
+| `VIOLATIONS: Found id= usages with string literals` | Literal ID strings in page code | — | Replace with constants from `src/constants/html_ids.py` |
 | `ModuleNotFoundError` | Missing dependency or inline import | — | Run `uv sync`; move import to top level |
 | `AssertionError` | Test expectation does not match behavior | Screenshot, server.log | Verify whether test or code is wrong |
 | `Celery worker failed to start` | Redis broker issue or import error | — | Check Redis is running; check worker imports |
@@ -307,5 +307,5 @@ Test failure
 | `env_test_local` | Local test environment (custom ports) |
 | `env_test` | CI test environment (service hostnames) |
 | `.gitlab-ci.yml` | CI pipeline configuration (uploads `test/artifacts/` on failure) |
-| `cosmo_template_app/constants/html_ids.py` | HTML ID constants for Playwright locators |
+| `src/constants/html_ids.py` | HTML ID constants for Playwright locators |
 | `docs/conventions/testing.md` | Testing conventions reference |

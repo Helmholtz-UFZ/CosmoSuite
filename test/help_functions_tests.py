@@ -1,12 +1,8 @@
 """Helper functions for tests."""
 
-import logging
 
 import pytest
-from playwright.sync_api import expect
 
-from cosmo_template_app.config import PORT
-from cosmo_template_app.constants import NAVBAR_TOGGLER_BUTTON_SHARED_ID
 
 
 def wait_for_dash_callback(page):

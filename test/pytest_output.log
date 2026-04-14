@@ -1,5 +1,5 @@
 INFO:root:rclone MinIO connectivity check passed
-DEBUG:cosmo_template_app.db_manager:Check existence of job: test
+DEBUG:src.db_manager:Check existence of job: test
 INFO:root:Database connection successful
 INFO:root:Redis connection successful
 ============================= test session starts ==============================

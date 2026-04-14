@@ -12,7 +12,7 @@ import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, callback_context, dcc, html
 from dash_form_factory import FormFactory
 
-from cosmo_template_app.constants import (
+from src.constants import (
     ACCORDION_JOB_SUBMISSION_ID,
     CHANGE_INPUT_BUTTON_JOB_SUBMISSION_ID,
     HEADER_DIV_JOB_SUBMISSION_ID,
@@ -29,10 +29,10 @@ from cosmo_template_app.constants import (
     URL_LOCATION_SHARED_ID,
     VIEW_RESULTS_BUTTON_JOB_SUBMISSION_ID,
 )
-from cosmo_template_app.error_handling import InvalidJobID, JobNotFound
-from cosmo_template_app.files_route import create_download_button
-from cosmo_template_app.job import Job
-from cosmo_template_app.layouts import (
+from src.error_handling import InvalidJobID, JobNotFound
+from src.files_route import create_download_button
+from src.job import Job
+from src.layouts import (
     create_job_header,
     form_layout_template,
     job_not_found_layout,

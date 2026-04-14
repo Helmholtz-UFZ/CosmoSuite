@@ -7,7 +7,7 @@ from typing import List
 
 from dotenv import load_dotenv
 
-from cosmo_template_app.config import env_vars, getenv
+from src.config import env_vars, getenv
 
 
 def _test_single_env_file(env_filename: str, logger, additional_lines: List[str]):

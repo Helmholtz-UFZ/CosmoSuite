@@ -2,7 +2,7 @@
 
 ## Central Error Handler
 
-All error handling is centralized in `cosmo_template_app/error_handling.py`.
+All error handling is centralized in `src/error_handling.py`.
 
 ---
 

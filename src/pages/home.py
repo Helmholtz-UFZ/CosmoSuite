@@ -12,16 +12,16 @@ import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, html
 from dash.exceptions import PreventUpdate
 
-from cosmo_template_app.constants import (
+from src.constants import (
     JOB_FEEDBACK_FORMTEXT_HOME_ID,
     JOB_INPUT_HOME_ID,
     START_BUTTON_HOME_ID,
     URL_LOCATION_SHARED_ID,
 )
-from cosmo_template_app.db_manager import DbManager
-from cosmo_template_app.job import Job, find_unique_job_id
-from cosmo_template_app.layouts import create_header, page_container_column_layout
-from cosmo_template_app.pydantic_models import ProfileConfig, validate_job_id
+from src.db_manager import DbManager
+from src.job import Job, find_unique_job_id
+from src.layouts import create_header, page_container_column_layout
+from src.pydantic_models import ProfileConfig, validate_job_id
 
 log = logging.getLogger(__name__)
 

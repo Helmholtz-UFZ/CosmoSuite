@@ -2,7 +2,7 @@
 
 ## Reusable Components
 
-All reusable components are in `cosmo_template_app/layout.py`.
+All reusable components are in `src/layout.py`.
 
 ### `loading_overlay`
 

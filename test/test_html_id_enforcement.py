@@ -1,7 +1,7 @@
 """Test HTML ID constants enforcement.
 
 This test ensures:
-1. All id= usages in cosmo_template_app/ use constants from html_ids.py
+1. All id= usages in src/ use constants from html_ids.py
 2. All constants in html_ids.py are used in callbacks (or marked with # nocheck)
 
 # nocheck Comment Usage:
@@ -29,14 +29,14 @@ from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
 
-def get_cosmo_template_app_path() -> Path:
-    """Get path to cosmo_template_app directory."""
-    return Path(__file__).parent.parent / "cosmo_template_app"
+def get_src_path() -> Path:
+    """Get path to src directory."""
+    return Path(__file__).parent.parent / "src"
 
 
 def get_html_ids_path() -> Path:
     """Get path to html_ids.py file."""
-    return get_cosmo_template_app_path() / "constants" / "html_ids.py"
+    return get_src_path() / "constants" / "html_ids.py"
 
 
 def load_html_ids_constants() -> Dict[str, bool]:
@@ -329,13 +329,13 @@ def extract_constants_from_ast(node: ast.AST) -> Set[str]:
 
 def test_no_string_literal_ids():
     """Test that all id= usages use constants from html_ids.py."""
-    cosmo_template_app = get_cosmo_template_app_path()
+    src = get_src_path()
     html_ids_constants = set(load_html_ids_constants().keys())
 
     all_violations = []
 
     # Scan all Python files
-    for py_file in find_python_files(cosmo_template_app):
+    for py_file in find_python_files(src):
         # Skip html_ids.py itself
         if py_file.name == "html_ids.py":
             continue
@@ -348,13 +348,13 @@ def test_no_string_literal_ids():
         violations = find_id_usages_in_file(py_file)
         for line_num, matched_text, id_value in violations:
             if not check_if_constant_from_html_ids(id_value, html_ids_constants):
-                rel_path = py_file.relative_to(cosmo_template_app.parent)
+                rel_path = py_file.relative_to(src.parent)
                 all_violations.append(f"{rel_path}:{line_num} - {matched_text}")
 
         # Check first positional arg in Input/Output/State calls
         callback_violations = find_non_constant_callback_ids(py_file)
         for line_num, call_desc, id_repr in callback_violations:
-            rel_path = py_file.relative_to(cosmo_template_app.parent)
+            rel_path = py_file.relative_to(src.parent)
             all_violations.append(f"{rel_path}:{line_num} - {call_desc}")
 
     if all_violations:
@@ -372,12 +372,12 @@ def test_no_string_literal_ids():
 
 def test_no_unused_id_constants():
     """Test that all constants in html_ids.py are used in callbacks."""
-    cosmo_template_app = get_cosmo_template_app_path()
+    src = get_src_path()
     html_ids_constants = load_html_ids_constants()
 
     # Find all constants used in callbacks across all files
     used_in_callbacks = set()
-    for py_file in find_python_files(cosmo_template_app):
+    for py_file in find_python_files(src):
         if "__pycache__" in str(py_file):
             continue
         used_in_callbacks.update(find_callback_id_usages_in_file(py_file))

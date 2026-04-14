@@ -10,7 +10,7 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, callback_context, dcc, html
 from dash_form_factory import FormFactory
-from cosmo_template_app.constants import (
+from src.constants import (
     CHECK_INPUT_BUTTON_INPUT_ID,
     CSV_UPLOAD_INPUT_ID,
     FORM_VALID_STORE_INPUT_ID,
@@ -23,9 +23,9 @@ from cosmo_template_app.constants import (
     UPLOADED_FILE_NAME_STORE_INPUT_ID,
     URL_LOCATION_SHARED_ID,
 )
-from cosmo_template_app.error_handling import FileValidationError, InvalidJobID, JobNotFound
-from cosmo_template_app.job import Job
-from cosmo_template_app.layouts import (
+from src.error_handling import FileValidationError, InvalidJobID, JobNotFound
+from src.job import Job
+from src.layouts import (
     create_job_header,
     form_factory,
     form_layout_template,

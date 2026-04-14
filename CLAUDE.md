@@ -67,7 +67,7 @@ good reason — but the violation must be accompanied by a comment explaining wh
 
 3. **HTML IDs - Restricted Usage**
 
-   - MUST use constants from `cosmo_template_app/constants/html_ids.py`
+   - MUST use constants from `src/constants/html_ids.py`
    - NEVER use literal ID strings
    - ONLY create IDs for:
      1. Components used in callbacks (Input/Output/State)

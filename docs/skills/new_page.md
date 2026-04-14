@@ -21,7 +21,7 @@ Ask the user before starting:
 
 ### Step 1: Create the page file
 
-Create `cosmo_template_app/pages/<page_name>.py`.
+Create `src/pages/<page_name>.py`.
 
 **Module docstring format:**
 
@@ -50,10 +50,10 @@ from dash import Input, Output, State, callback, dcc, html, register_page
 from dash.exceptions import PreventUpdate
 
 # 3. Application
-from cosmo_template_app.constants.html_ids import (
+from src.constants.html_ids import (
     # ... only the IDs this page needs
 )
-from cosmo_template_app.layout import (
+from src.layout import (
     # ... only the layout helpers this page needs
 )
 ```
@@ -88,7 +88,7 @@ register_page(
 | Split | `page_container_split_layout(map, input_container)` | Workflow pages with map (70/30) | `pages/user_info.py` |
 | Fullscreen | `page_container_fullscreen_layout(content)` | Full-width content | `layout.py` |
 
-All layout functions are in `cosmo_template_app/layout.py`.
+All layout functions are in `src/layout.py`.
 
 ### Step 3: Build the layout function
 
@@ -142,7 +142,7 @@ def layout(job_id):  # or def layout(): for static-route dynamic content
     return page_container_split_layout(map, input_container)
 ```
 
-**Available layout helpers** from `cosmo_template_app/layout.py`:
+**Available layout helpers** from `src/layout.py`:
 - `create_card_input(card_body, card_footer, name_step, title, job_id)` — card with optional progress tabs
 - `create_header(title, subtitle, bg_color, rounded)` — page header
 - `progress_footer(prev_id, prev_url, next_id, next_url, ...)` — prev/next navigation footer
@@ -161,7 +161,7 @@ These are already in the global layout (`layout.py:app_layout()`). Do NOT add th
 
 ### Step 5: HTML IDs
 
-File: `cosmo_template_app/constants/html_ids.py`
+File: `src/constants/html_ids.py`
 
 **Only create IDs for:**
 1. Components used in callbacks (Input/Output/State)
@@ -187,7 +187,7 @@ SUBMIT_BUTTON_MY_PAGE_ID = "submit-button-my-page-id"
 
 ### Step 6: Error handling
 
-File: `cosmo_template_app/error_handling.py`
+File: `src/error_handling.py`
 
 - Existing error modal handles uncaught exceptions automatically via `handle_error()`
 - Only add a custom exception if you need a **specific user-facing message** for a new error type
@@ -243,14 +243,14 @@ log = logging.getLogger(__name__)
 After the page works:
 
 ```bash
-python -m cosmo_template_app.doc_generator <job_id>
+python -m src.doc_generator <job_id>
 ```
 
 This captures a screenshot and extracts the module docstring into web documentation. Ensure your `# User documentation` section in the docstring is complete.
 
 ### Step 11: Navbar (if applicable)
 
-File: `cosmo_template_app/layout.py`, function `create_navbar()`
+File: `src/layout.py`, function `create_navbar()`
 
 Add a `dbc.NavItem` inside the `dbc.Nav` children list:
 
@@ -304,10 +304,10 @@ import logging
 import dash_bootstrap_components as dbc
 from dash import Input, Output, callback, html, register_page
 
-from cosmo_template_app.constants.html_ids import (
+from src.constants.html_ids import (
     # page-specific IDs
 )
-from cosmo_template_app.layout import create_header, page_container_column_layout
+from src.layout import create_header, page_container_column_layout
 
 log = logging.getLogger(__name__)
 
@@ -362,14 +362,14 @@ import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, dcc, html, register_page
 from dash.exceptions import PreventUpdate
 
-from cosmo_template_app.constants.general import JOB_STATUS_PENDING
-from cosmo_template_app.constants.html_ids import (
+from src.constants.general import JOB_STATUS_PENDING
+from src.constants.html_ids import (
     JOB_ID_STORE_SHARED_ID,
     URL_SHARED_ID,
     # page-specific IDs
 )
-from cosmo_template_app.job import Job
-from cosmo_template_app.layout import (
+from src.job import Job
+from src.layout import (
     build_url_step,
     create_card_input,
     create_map,
@@ -447,10 +447,10 @@ def go_to_next_page(n_clicks, pathname):
 
 | File | Purpose |
 |------|---------|
-| `cosmo_template_app/pages/<page_name>.py` | The new page (create) |
-| `cosmo_template_app/constants/html_ids.py` | HTML ID constants (edit) |
-| `cosmo_template_app/layout.py` | Layout helpers + navbar (edit if adding nav link) |
-| `cosmo_template_app/error_handling.py` | Custom exceptions (edit if new error types) |
+| `src/pages/<page_name>.py` | The new page (create) |
+| `src/constants/html_ids.py` | HTML ID constants (edit) |
+| `src/layout.py` | Layout helpers + navbar (edit if adding nav link) |
+| `src/error_handling.py` | Custom exceptions (edit if new error types) |
 | `docs/conventions/callbacks.md` | Callback patterns reference |
 | `docs/conventions/bootstrap_styling.md` | Styling reference |
 | `docs/conventions/html_ids.md` | ID naming reference |

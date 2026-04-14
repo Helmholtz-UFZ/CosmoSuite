@@ -7,13 +7,13 @@ from threading import Thread
 import dash_bootstrap_components as dbc
 from dash import Dash
 
-from cosmo_template_app.background_job_manager import background_job_manager
-from cosmo_template_app.config import DEBUG, PORT
-from cosmo_template_app.error_handling import handle_error
-from cosmo_template_app.files_route import serve_files
-from cosmo_template_app.layouts import app_layout
-from cosmo_template_app.logger import get_logger_config_web
-from cosmo_template_app.object_storage_manager import create_bucket, setup_remote
+from src.background_job_manager import background_job_manager
+from src.config import DEBUG, PORT
+from src.error_handling import handle_error
+from src.files_route import serve_files
+from src.layouts import app_layout
+from src.logger import get_logger_config_web
+from src.object_storage_manager import create_bucket, setup_remote
 
 # Configure logging BEFORE Dash() and any getLogger() calls.
 logging.config.dictConfig(get_logger_config_web(DEBUG))

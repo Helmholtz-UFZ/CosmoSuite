@@ -73,7 +73,7 @@ log.error(f"Error processing job: {str(e)}", exc_info=True)
 
 ## Logger Configuration
 
-Configuration is in `cosmo_template_app/logger.py`:
+Configuration is in `src/logger.py`:
 - Web/worker: Console + PostgreSQL database logging
 - Computation tasks: File-based logging in job output directory
 - Third-party package filtering to reduce noise

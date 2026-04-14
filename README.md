@@ -140,7 +140,7 @@ pre-commit run --all-files
 ## File Structure
 
 ```
-cosmo_template_app/          # Main application package
+src/          # Main application package
   app.py                     # Dash app initialization
   computation_module.py      # CSV statistical profiler
   db_manager.py              # SQLAlchemy models

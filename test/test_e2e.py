@@ -12,10 +12,10 @@ import pytest
 
 from playwright.sync_api import expect
 
-from cosmo_template_app.config import PORT
-from cosmo_template_app.layouts import form_factory
+from src.config import PORT
+from src.layouts import form_factory
 from test.help_functions_tests import check_all_errors, wait_for_dash_callback
-from cosmo_template_app.constants import (
+from src.constants import (
     ACCORDION_JOB_SUBMISSION_ID,
     BACK_BUTTON_RESULTS_ID,
     CHANGE_INPUT_BUTTON_JOB_SUBMISSION_ID,
@@ -23,13 +23,10 @@ from cosmo_template_app.constants import (
     CSV_UPLOAD_INPUT_ID,
     DOWNLOAD_BUTTON_SHARED_ID,
     JOB_INPUT_HOME_ID,
-    JOBS_TABLE_JOB_MANAGEMENT_ID,
     NAVBAR_COLLAPSE_DIV_SHARED_ID,
     NAVBAR_TOGGLER_BUTTON_SHARED_ID,
-    REFRESH_BUTTON_JOB_MANAGEMENT_ID,
     RESET_CONFIRM_BUTTON_SHARED_ID,
     RESET_CONFIRM_MODAL_SHARED_ID,
-    RESUBMIT_BUTTON_JOB_SUBMISSION_ID,
     START_BUTTON_HOME_ID,
     STATUS_DIV_JOB_SUBMISSION_ID,
     SUBMIT_BUTTON_JOB_SUBMISSION_ID,

@@ -7,14 +7,14 @@ from datetime import date, datetime, timedelta
 
 from celery import Task
 
-from cosmo_template_app.config import WEB_WORK_DIR
-from cosmo_template_app.constants import (
+from src.config import WEB_WORK_DIR
+from src.constants import (
     DAYS_DELETE_NOT_SUBMITTED,
     DAYS_DELETE_SUBMITTED,
     LOG_RETENTION_DAYS,
 )
-from cosmo_template_app.object_storage_manager import delete_directory_from_storage
-from cosmo_template_app.db_manager import DbManager
+from src.object_storage_manager import delete_directory_from_storage
+from src.db_manager import DbManager
 
 log = logging.getLogger(__name__)
 

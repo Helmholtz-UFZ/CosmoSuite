@@ -50,8 +50,8 @@ USER appuser
 
 # Worker command
 CMD echo "Starting Celery worker..."; \
-    python3 /python_docker/cosmo_template/cosmo_template_app/object_storage_manager.py setup_remote; \
-    exec celery -A cosmo_template_app.celery_app.celery worker \
+    python3 /python_docker/cosmo_template/src/object_storage_manager.py setup_remote; \
+    exec celery -A src.celery_app.celery worker \
         --loglevel=debug \
         --concurrency=4 \
         --queues=default,computation,maintenance \

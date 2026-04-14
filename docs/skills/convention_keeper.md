@@ -12,7 +12,7 @@ Ask the user before starting:
 
 1. **Scope** — Audit all conventions (Critical Anti-Patterns + detailed convention docs), or only the Critical Anti-Patterns from `CLAUDE.md`?
 2. **Mode** — Audit + Fix (find violations and fix them), or audit-only (report without changing code)?
-3. **Exclusions** — Any files or directories to skip? Default scope is `cosmo_template_app/**/*.py` (excludes `test/`, `docs/`, generated files).
+3. **Exclusions** — Any files or directories to skip? Default scope is `src/**/*.py` (excludes `test/`, `docs/`, generated files).
 
 ---
 
@@ -119,7 +119,7 @@ After all conventions are done:
   Grep: \.get\(
   ```
 - **Exclude false positives:** `.env.get`, `request.args.get`, `request.form.get`, `os.environ.get`, `session.get`, `celery_app.conf.get`. Only flag dictionary `.get()` calls in application logic.
-- **Target:** `cosmo_template_app/**/*.py`
+- **Target:** `src/**/*.py`
 
 ### Convention 2: No bare `except`
 
@@ -131,7 +131,7 @@ After all conventions are done:
   Grep: except\s*:
   ```
 - **Note:** `except Exception as e:` with re-raise (`raise`) in background task error handlers is acceptable per `error_handling.md` Section 6.
-- **Target:** `cosmo_template_app/**/*.py`
+- **Target:** `src/**/*.py`
 
 ### Convention 3: No inline imports
 
@@ -142,12 +142,12 @@ After all conventions are done:
   Grep (multiline): ^\s+(import |from .+ import )
   ```
 - **How to check:** For each match, verify it is inside a function or method body (indented under `def`), not at module level.
-- **Target:** `cosmo_template_app/**/*.py`
+- **Target:** `src/**/*.py`
 
 ### Convention 4: HTML ID literals
 
 - **Source:** [CLAUDE.md](../../CLAUDE.md) §3, [html_ids.md](../conventions/html_ids.md)
-- **Rule:** NEVER use literal ID strings. Always use constants from `cosmo_template_app/constants/html_ids.py`.
+- **Rule:** NEVER use literal ID strings. Always use constants from `src/constants/html_ids.py`.
 - **Search patterns:**
   ```
   Grep: id="[a-z]
@@ -156,7 +156,7 @@ After all conventions are done:
   ```bash
   ./run_pytest.sh --no-services test/test_html_id_enforcement.py
   ```
-- **Target:** `cosmo_template_app/**/*.py`
+- **Target:** `src/**/*.py`
 
 ### Convention 5: No inline CSS
 
@@ -167,7 +167,7 @@ After all conventions are done:
   Grep: style=
   Grep: style={
   ```
-- **Target:** `cosmo_template_app/**/*.py`
+- **Target:** `src/**/*.py`
 
 ### Convention 6: No legacy logging
 
@@ -178,7 +178,7 @@ After all conventions are done:
   Grep: extra={"tag"
   Grep: extra={'tag'
   ```
-- **Target:** `cosmo_template_app/**/*.py`
+- **Target:** `src/**/*.py`
 
 ### Convention 7: Proper logger setup
 
@@ -193,7 +193,7 @@ After all conventions are done:
   Grep: logging\.error\(
   ```
 - **How to check:** For each file with log calls, verify it has `log = logging.getLogger(__name__)` at module level. Flag files using `logging.info()` directly instead of `log.info()`.
-- **Target:** `cosmo_template_app/**/*.py`
+- **Target:** `src/**/*.py`
 
 ### Convention 8: HTML ID naming
 
@@ -201,14 +201,14 @@ After all conventions are done:
 - **Rule:** Constants must follow `<NAME>_<TYPE>_<PAGE>_ID` format. Values must be kebab-case.
 - **Search patterns:**
   ```
-  Read: cosmo_template_app/constants/html_ids.py
+  Read: src/constants/html_ids.py
   ```
 - **How to check:** Review each constant. Verify:
   1. Name follows `<NAME>_<TYPE>_<PAGE>_ID` pattern
   2. Value is kebab-case equivalent
   3. TYPE is a valid component type (BUTTON, INPUT, DIV, DROPDOWN, STORE, MODAL, ALERT, LINK, LAYER)
   4. PAGE matches a known page or is SHARED/COMMON
-- **Target:** `cosmo_template_app/constants/html_ids.py`
+- **Target:** `src/constants/html_ids.py`
 
 ### Convention 9: HTML ID file organization
 
@@ -216,10 +216,10 @@ After all conventions are done:
 - **Rule:** IDs organized in three-level hierarchy: PAGE → TYPE → NAME (alphabetical within each level). SHARED/COMMON first.
 - **Search patterns:**
   ```
-  Read: cosmo_template_app/constants/html_ids.py
+  Read: src/constants/html_ids.py
   ```
 - **How to check:** Verify the file follows the grouping order. SHARED section first, then page-specific sections alphabetically.
-- **Target:** `cosmo_template_app/constants/html_ids.py`
+- **Target:** `src/constants/html_ids.py`
 
 ### Convention 10: Callback conventions
 
@@ -235,7 +235,7 @@ After all conventions are done:
   Grep: n_clicks        # callbacks with n_clicks should have prevent_initial_call
   ```
 - **How to check:** For each callback with `n_clicks` input, verify `prevent_initial_call=True` is set. Check that `@app.callback` is not used in page files.
-- **Target:** `cosmo_template_app/pages/*.py`, `cosmo_template_app/layout.py`
+- **Target:** `src/pages/*.py`, `src/layout.py`
 
 ### Convention 11: Page file structure
 
@@ -249,10 +249,10 @@ After all conventions are done:
   6. Callbacks section
 - **Search patterns:**
   ```
-  Glob: cosmo_template_app/pages/*.py
+  Glob: src/pages/*.py
   ```
 - **How to check:** Read each page file and verify the section ordering. Flag files where callbacks appear before the layout function, or imports are scattered.
-- **Target:** `cosmo_template_app/pages/*.py`
+- **Target:** `src/pages/*.py`
 
 ### Convention 12: Error handling
 
@@ -269,13 +269,13 @@ After all conventions are done:
   Grep: raise\s+\w+Exception
   ```
 - **How to check:** Verify all custom exception classes are in `error_handling.py` (not scattered across other files). Check that each exception has a corresponding entry in `error_responds_dict`.
-- **Target:** `cosmo_template_app/**/*.py`
+- **Target:** `src/**/*.py`
 
 ### Convention 13: Environment variables
 
 - **Source:** [environment_variables.md](../conventions/environment_variables.md)
 - **Rule:**
-  - All env vars accessed through `cosmo_template_app/config.py`.
+  - All env vars accessed through `src/config.py`.
   - No direct `os.getenv()` or `os.environ` outside `config.py`.
   - All vars listed in `config.env_vars`.
 - **Search patterns:**
@@ -285,7 +285,7 @@ After all conventions are done:
   ```
 - **Exclude:** `config.py` itself (where `getenv()` is defined).
 - **How to check:** Any match outside `config.py` is a violation. Verify all vars are in `config.env_vars` list.
-- **Target:** `cosmo_template_app/**/*.py`
+- **Target:** `src/**/*.py`
 
 ---
 
@@ -295,11 +295,11 @@ After all conventions are done:
 |------|---------|
 | `CLAUDE.md` | Critical anti-patterns summary |
 | `docs/conventions/*.md` | All 8 detailed convention documents |
-| `cosmo_template_app/constants/html_ids.py` | HTML ID constants |
-| `cosmo_template_app/config.py` | Environment config, `getenv()` wrapper |
-| `cosmo_template_app/logger.py` | Logger configuration |
-| `cosmo_template_app/error_handling.py` | Custom exceptions, `error_responds_dict` |
-| `cosmo_template_app/layout.py` | Shared layout components and callbacks |
-| `cosmo_template_app/pages/*.py` | Page files (main audit targets) |
+| `src/constants/html_ids.py` | HTML ID constants |
+| `src/config.py` | Environment config, `getenv()` wrapper |
+| `src/logger.py` | Logger configuration |
+| `src/error_handling.py` | Custom exceptions, `error_responds_dict` |
+| `src/layout.py` | Shared layout components and callbacks |
+| `src/pages/*.py` | Page files (main audit targets) |
 | `test/test_html_id_enforcement.py` | HTML ID enforcement test |
 | `test/test_env.py` | Environment variable completeness test |

@@ -54,7 +54,7 @@ CHECK_INPUT_BUTTON_INPUT_ID = "check_input_button_input_id"  # underscores requi
 
 ## File Organization
 
-IDs in `cosmo_template_app/constants/html_ids.py` use three-level hierarchy:
+IDs in `src/constants/html_ids.py` use three-level hierarchy:
 
 1. **Top level** - Group by PAGE/SCOPE
    - `SHARED/COMMON` section first

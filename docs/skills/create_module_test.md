@@ -22,7 +22,7 @@ Before writing any test code, read:
 
 - `test/test_db_manager.py` — core module test reference
 - `test/conftest.py` — available fixtures (`logger`, service health checks)
-- The module source under `cosmo_template_app/` — understand the API to test
+- The module source under `src/` — understand the API to test
 
 ### Step 2: Create the test file
 
@@ -71,7 +71,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 def test_<operation>():
     """Test <what this test validates>."""
-    from cosmo_template_app.<module> import <Class>
+    from src.<module> import <Class>
 
     # Arrange
     data = {...}
@@ -88,7 +88,7 @@ def test_<operation>():
 ```python
 def test_save_and_load():
     """Test save and load cycle."""
-    from cosmo_template_app.job import Job
+    from src.job import Job
 
     job = Job()
     job.save()
@@ -106,7 +106,7 @@ def test_save_and_load():
 | `test/test_<module>.py` | The new test file (create) |
 | `test/test_db_manager.py` | Core module test reference (read) |
 | `test/conftest.py` | Fixtures and service health checks (read) |
-| `cosmo_template_app/<module>.py` | The module being tested (read) |
+| `src/<module>.py` | The module being tested (read) |
 | `docs/conventions/testing.md` | Testing conventions reference (read) |
 | `.gitlab-ci.yml` | CI pipeline configuration (read) |
 | `run_pytest.sh` | Local test runner with Docker services |

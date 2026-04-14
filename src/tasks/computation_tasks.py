@@ -8,10 +8,10 @@ from logging.config import dictConfig
 
 from celery import Task
 
-from cosmo_template_app.computation_module import profile_csv
-from cosmo_template_app.constants import LOG_FILE_NAME
-from cosmo_template_app.job import Job
-from cosmo_template_app.logger import (
+from src.computation_module import profile_csv
+from src.constants import LOG_FILE_NAME
+from src.job import Job
+from src.logger import (
     get_logger_config_computation,
     get_logger_config_worker,
 )

@@ -26,7 +26,7 @@ to preserve them across runs).
 ## Code Rules
 
 - All tests go in `test/` (flat directory, no subdirectories)
-- Use constants from `cosmo_template_app/constants/html_ids.py` for element IDs in
+- Use constants from `src/constants/html_ids.py` for element IDs in
   Playwright locators — never literal ID strings
 - All imports at top level
 - When adding a required env var, update `test_env.py`'s checks
@@ -93,7 +93,7 @@ project.
 ```python
 from playwright.sync_api import expect
 
-from cosmo_template_app.constants.html_ids import SOME_BUTTON_ID
+from src.constants.html_ids import SOME_BUTTON_ID
 
 def test_something(page, dash_app):
     page.goto(f"http://localhost:{PORT}/")

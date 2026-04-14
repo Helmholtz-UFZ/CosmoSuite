@@ -1,12 +1,11 @@
 """Unit tests for the CSV statistical profiler (computation_module.py)."""
 
 import os
-import tempfile
 
 import pandas as pd
 import pytest
 
-from cosmo_template_app.computation_module import profile_csv
+from src.computation_module import profile_csv
 
 
 @pytest.fixture

@@ -1,6 +1,6 @@
 # Environment Variables
 
-All environment variables are centralized in `cosmo_template_app/config.py`. They are
+All environment variables are centralized in `src/config.py`. They are
 loaded via `python-dotenv` and validated at startup with a strict `getenv()`
 wrapper that raises `ValueError` on any missing variable.
 
@@ -33,7 +33,7 @@ Grouped by service. The full list lives in `config.env_vars`.
 2. The custom `getenv()` wrapper calls `os.getenv()` and raises `ValueError` if
    the variable is missing.
 3. All values are stored as **module-level constants** — import them from
-   `cosmo_template_app.config`.
+   `src.config`.
 4. The `config.env_vars` list enumerates every required variable. Tests use this
    list to validate completeness across all env files.
 
@@ -82,6 +82,6 @@ How it works:
 **Adding a new env var — checklist:**
 
 1. Add the variable to both env files (`env_dev`, `env_test`).
-2. Add it to the `env_vars` list in `cosmo_template_app/config.py`.
+2. Add it to the `env_vars` list in `src/config.py`.
 3. Add a `getenv()` call and module-level constant in `config.py`.
 4. Run `./run_pytest.sh` — `test_env.py` will catch any missing vars.
