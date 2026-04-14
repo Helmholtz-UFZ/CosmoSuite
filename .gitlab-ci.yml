@@ -1,0 +1,66 @@
+# SPDX-FileCopyrightText: 2025 Hannes Bohring <hannes.bohring@ufz.de>
+# SPDX-FileCopyrightText: 2025 Helmholtz Centre for Environmental Research GmbH - UFZ
+#
+# SPDX-License-Identifier: AGPL-3.0-only
+---
+stages:
+  - "lint"
+  - "test"
+
+variables:
+  POSTGRES_DB: cosmo_template
+  POSTGRES_USER: cosmo_template_user
+  POSTGRES_PASSWORD: test
+  POSTGRES_HOST_AUTH_METHOD: trust
+  POSTGRES_HOST_NAME: postgres
+  POSTGRES_PORT: 5432
+  OBJECT_STORAGE_ACCESS_KEY: "accesskey"
+  OBJECT_STORAGE_SECRET_KEY: "secretkey"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_PASSWORD: ""
+
+linting:
+  stage: "lint"
+  image: "python:3.13"
+  before_script:
+    - "pip install uv"
+    - "uv sync"
+  script:
+    - "uv run ruff format --check ."
+    - "uv run ruff check ."
+
+test:
+  stage: "test"
+  image: "python:3.13"
+  services:
+    - name: "postgres:17"
+      alias: postgres
+    - name: "minio/minio:latest"
+      alias: minio
+      command: ["server", "/data", "--console-address", ":9001"]
+      variables:
+        MINIO_ROOT_USER: "${OBJECT_STORAGE_ACCESS_KEY}"
+        MINIO_ROOT_PASSWORD: "${OBJECT_STORAGE_SECRET_KEY}"
+    - name: "redis:7-alpine"
+      alias: redis
+  before_script:
+    - apt-get update && apt-get install -y postgresql-client curl rclone
+    - "cp env_test .env"
+    - "source .env && rclone config create minio s3 provider=Minio access_key_id=${OBJECT_STORAGE_ACCESS_KEY} secret_access_key=${OBJECT_STORAGE_SECRET_KEY} endpoint=${OBJECT_STORAGE_HOST}"
+    - "source .env && rclone mkdir minio:${OBJECT_STORAGE_BUCKET}"
+    - "rclone lsd minio:"
+    - "export PGPASSWORD=${POSTGRES_PASSWORD}"
+    - "psql -h ${POSTGRES_HOST_NAME} -U ${POSTGRES_USER} -d ${POSTGRES_DB} < docker/init.sql"
+    - "pip install uv"
+    - "uv sync"
+    - "uv run playwright install --with-deps chromium"
+    - "mkdir -p test/artifacts"
+  script:
+    - uv run pytest -v --screenshot only-on-failure --tracing retain-on-failure --output test/artifacts
+  artifacts:
+    when: on_failure
+    expire_in: 7 days
+    paths:
+      - test/artifacts/
