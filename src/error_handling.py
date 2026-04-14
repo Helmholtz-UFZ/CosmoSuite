@@ -127,7 +127,10 @@ error_responds_dict = {
     # FileValidationError is always caught by the upload callback and shown
     # inline. If it reaches the global handler, something is wrong — treat
     # it as undefined behaviour and show the generic internal error.
-    FileValidationError: ("Internal Error", "Ups this should not happen. An error occurred."),
+    FileValidationError: (
+        "Internal Error",
+        "Ups this should not happen. An error occurred.",
+    ),
 }
 error_modal = dbc.Modal(
     [

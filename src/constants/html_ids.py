@@ -14,7 +14,9 @@ See docs/conventions/html_ids.md for full details.
 # =============================================================================
 
 # --- Locations ---
-URL_LOCATION_SHARED_ID = "url-location-shared-id"  # nocheck - dcc.Location used by Dash routing
+URL_LOCATION_SHARED_ID = (
+    "url-location-shared-id"  # nocheck - dcc.Location used by Dash routing
+)
 
 # --- Modals ---
 ERROR_MODAL_SHARED_ID = "error-modal-shared-id"  # nocheck - used via set_props()
@@ -29,7 +31,9 @@ ERROR_MESSAGE_DIV_SHARED_ID = (
 )
 
 # --- Buttons ---
-DOWNLOAD_BUTTON_SHARED_ID = "download-button-shared-id"  # nocheck - used in files_route, testing only
+DOWNLOAD_BUTTON_SHARED_ID = (
+    "download-button-shared-id"  # nocheck - used in files_route, testing only
+)
 NAVBAR_TOGGLER_BUTTON_SHARED_ID = "navbar-toggler-button-shared-id"
 
 # --- Collapses ---
@@ -69,7 +73,9 @@ CHECK_INPUT_BUTTON_INPUT_ID = (  # nocheck - used via FormFactory
 RESET_JOB_BUTTON_INPUT_ID = "reset-job-button-input-id"
 
 # --- Divs ---
-HEADER_DIV_INPUT_ID = "header-div-input-id"  # nocheck - used via landing_page_layout_column
+HEADER_DIV_INPUT_ID = (
+    "header-div-input-id"  # nocheck - used via landing_page_layout_column
+)
 MAIN_CONTENT_DIV_INPUT_ID = "main-content-div-input-id"
 
 # --- Uploads ---
@@ -94,7 +100,9 @@ VIEW_RESULTS_BUTTON_JOB_SUBMISSION_ID = "view-results-button-job-submission-id"
 RESUBMIT_BUTTON_JOB_SUBMISSION_ID = "resubmit-button-job-submission-id"
 
 # --- Divs ---
-HEADER_DIV_JOB_SUBMISSION_ID = "header-div-job-submission-id"  # nocheck - used via landing_page_layout_column
+HEADER_DIV_JOB_SUBMISSION_ID = (
+    "header-div-job-submission-id"  # nocheck - used via landing_page_layout_column
+)
 MAIN_CONTENT_DIV_JOB_SUBMISSION_ID = "main-content-div-job-submission-id"
 STATUS_DIV_JOB_SUBMISSION_ID = "status-div-job-submission-id"
 JOB_LOGS_DIV_JOB_SUBMISSION_ID = "job-logs-div-job-submission-id"
@@ -116,7 +124,9 @@ ICON_JOB_SUBMISSION_ID = "icon-job-submission-id"
 # =============================================================================
 
 # --- Buttons ---
-BACK_BUTTON_RESULTS_ID = "back-button-results-id"  # nocheck - used as href button, testing only
+BACK_BUTTON_RESULTS_ID = (
+    "back-button-results-id"  # nocheck - used as href button, testing only
+)
 
 # --- Divs ---
 HEADER_DIV_RESULTS_ID = "header-div-results-id"

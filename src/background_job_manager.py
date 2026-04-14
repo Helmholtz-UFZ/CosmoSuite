@@ -40,6 +40,7 @@ class BackgroundJobManager:
             broker_connection_retry_on_startup=True,
             broker_connection_retry=True,
         )
+
     def submit_computation_job(self, job) -> tuple[str | None, bool]:
         """Submit a computation job to the Celery queue.
 
@@ -69,9 +70,7 @@ class BackgroundJobManager:
                 NAME_COMPUTATION_TASK,
                 ex=86400,  # 24 hour TTL
             )
-            log.info(
-                f"Submitted computation job {job.job_id} with task_id={result.id}"
-            )
+            log.info(f"Submitted computation job {job.job_id} with task_id={result.id}")
             return result.id, False
         except (OperationalError, CeleryError) as e:
             log.error(f"Failed to submit computation job {job.job_id}: {e}")

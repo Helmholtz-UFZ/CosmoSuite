@@ -17,11 +17,13 @@ def sample_mixed_csv():
 @pytest.fixture
 def numeric_only_csv(tmp_path):
     """Create a CSV with only numeric columns."""
-    df = pd.DataFrame({
-        "a": [1.0, 2.0, 3.0, 4.0, 5.0],
-        "b": [10, 20, 30, 40, 50],
-        "c": [100, 200, 300, 400, 500],
-    })
+    df = pd.DataFrame(
+        {
+            "a": [1.0, 2.0, 3.0, 4.0, 5.0],
+            "b": [10, 20, 30, 40, 50],
+            "c": [100, 200, 300, 400, 500],
+        }
+    )
     path = str(tmp_path / "numeric.csv")
     df.to_csv(path, index=False)
     return path
@@ -30,11 +32,13 @@ def numeric_only_csv(tmp_path):
 @pytest.fixture
 def categorical_only_csv(tmp_path):
     """Create a CSV with only categorical columns."""
-    df = pd.DataFrame({
-        "color": ["red", "blue", "green", "red", "blue", "red"],
-        "size": ["S", "M", "L", "M", "S", "L"],
-        "shape": ["circle", "square", "circle", "triangle", "circle", "square"],
-    })
+    df = pd.DataFrame(
+        {
+            "color": ["red", "blue", "green", "red", "blue", "red"],
+            "size": ["S", "M", "L", "M", "S", "L"],
+            "shape": ["circle", "square", "circle", "triangle", "circle", "square"],
+        }
+    )
     path = str(tmp_path / "categorical.csv")
     df.to_csv(path, index=False)
     return path
@@ -43,11 +47,13 @@ def categorical_only_csv(tmp_path):
 @pytest.fixture
 def csv_with_missing(tmp_path):
     """Create a CSV with missing values."""
-    df = pd.DataFrame({
-        "x": [1.0, None, 3.0, None, 5.0],
-        "y": [10.0, 20.0, None, 40.0, 50.0],
-        "label": ["a", None, "c", "a", None],
-    })
+    df = pd.DataFrame(
+        {
+            "x": [1.0, None, 3.0, None, 5.0],
+            "y": [10.0, 20.0, None, 40.0, 50.0],
+            "label": ["a", None, "c", "a", None],
+        }
+    )
     path = str(tmp_path / "missing.csv")
     df.to_csv(path, index=False)
     return path

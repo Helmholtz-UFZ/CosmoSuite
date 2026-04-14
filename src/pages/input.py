@@ -210,7 +210,11 @@ def handle_upload(contents, filename, job_id):
         return {"file_name": None, "valid": False, "message": str(e)}
 
     log.info(f"CSV saved for job {job_id}: {safe_name}")
-    return {"file_name": safe_name, "valid": True, "message": f"File uploaded: {safe_name}. To change the file, upload a new one."}
+    return {
+        "file_name": safe_name,
+        "valid": True,
+        "message": f"File uploaded: {safe_name}. To change the file, upload a new one.",
+    }
 
 
 @callback(

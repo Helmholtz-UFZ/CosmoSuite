@@ -25,7 +25,11 @@ from src.constants import (
 from src.error_handling import InvalidJobID, JobNotFound
 from src.files_route import create_download_button
 from src.job import Job
-from src.layouts import create_job_header, job_not_found_layout, landing_page_layout_column
+from src.layouts import (
+    create_job_header,
+    job_not_found_layout,
+    landing_page_layout_column,
+)
 
 log = logging.getLogger(__name__)
 

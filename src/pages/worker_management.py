@@ -610,7 +610,9 @@ dash.clientside_callback(
         "last_refresh": Output(
             WORKER_LAST_REFRESH_DIV_WORKER_MANAGEMENT_ID, "children"
         ),
-        "loading": Output(LOADING_OVERLAY_MODAL_SHARED_ID, "is_open", allow_duplicate=True),
+        "loading": Output(
+            LOADING_OVERLAY_MODAL_SHARED_ID, "is_open", allow_duplicate=True
+        ),
         "active_selected": Output(
             ACTIVE_TASKS_TABLE_WORKER_MANAGEMENT_ID, "selectedRows"
         ),

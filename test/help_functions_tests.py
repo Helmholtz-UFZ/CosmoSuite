@@ -1,8 +1,6 @@
 """Helper functions for tests."""
 
-
 import pytest
-
 
 
 def wait_for_dash_callback(page):
