@@ -71,6 +71,7 @@ def start_computation_task(self, job_id):
             histogram_bins=config.histogram_bins,
             compute_correlation=config.compute_correlation,
             top_n_categories=config.top_n_categories,
+            trigger_error=config.trigger_error,
         )
 
         # Save result as JSON

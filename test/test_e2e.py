@@ -8,13 +8,17 @@ import logging
 import os
 import time
 
+import pytest
+
 from playwright.sync_api import expect
 
 from cosmo_template_app.config import PORT
+from cosmo_template_app.layouts import form_factory
 from test.help_functions_tests import check_all_errors, wait_for_dash_callback
 from cosmo_template_app.constants import (
     ACCORDION_JOB_SUBMISSION_ID,
     BACK_BUTTON_RESULTS_ID,
+    CHANGE_INPUT_BUTTON_JOB_SUBMISSION_ID,
     CHECK_INPUT_BUTTON_INPUT_ID,
     CSV_UPLOAD_INPUT_ID,
     DOWNLOAD_BUTTON_SHARED_ID,
@@ -23,6 +27,9 @@ from cosmo_template_app.constants import (
     NAVBAR_COLLAPSE_DIV_SHARED_ID,
     NAVBAR_TOGGLER_BUTTON_SHARED_ID,
     REFRESH_BUTTON_JOB_MANAGEMENT_ID,
+    RESET_CONFIRM_BUTTON_SHARED_ID,
+    RESET_CONFIRM_MODAL_SHARED_ID,
+    RESUBMIT_BUTTON_JOB_SUBMISSION_ID,
     START_BUTTON_HOME_ID,
     STATUS_DIV_JOB_SUBMISSION_ID,
     SUBMIT_BUTTON_JOB_SUBMISSION_ID,
@@ -33,6 +40,7 @@ from cosmo_template_app.constants import (
 
 BASE_URL = f"http://localhost:{PORT}"
 SAMPLE_CSV = os.path.join(os.path.dirname(__file__), "sample_mixed.csv")
+TRIGGER_ERROR_CHECKBOX_ID = form_factory.id_format.format(field_name="trigger_error")
 
 
 def test_home_page_loads(page, dash_app):
@@ -127,9 +135,9 @@ def test_full_csv_profiling_flow(page, dash_app, celery_worker):
             logging.info("Job completed")
             break
         if "FAILED" in status_text:
-            raise AssertionError("Job failed unexpectedly")
+            pytest.fail("Job failed unexpectedly")
     else:
-        raise AssertionError(f"Job did not complete within {max_wait}s")
+        pytest.fail(f"Job did not complete within {max_wait}s")
 
     # 10. Verify accordion shows logs
     expect(page.locator(f"#{ACCORDION_JOB_SUBMISSION_ID}")).to_be_visible(timeout=5000)
@@ -168,3 +176,115 @@ def test_full_csv_profiling_flow(page, dash_app, celery_worker):
     expect(page.locator(f"#{DOWNLOAD_BUTTON_SHARED_ID}")).to_be_visible(timeout=5000)
     check_all_errors(page)
     logging.info("E2E test passed")
+
+
+def test_error_recovery_flow(page, dash_app, celery_worker):
+    """E2e test: trigger error → fail → change input → resubmit → complete."""
+    page.set_viewport_size({"width": 1920, "height": 1080})
+
+    # 1. Create job
+    page.goto(f"{BASE_URL}/")
+    expect(page.locator(f"#{START_BUTTON_HOME_ID}")).to_be_visible(timeout=10000)
+    wait_for_dash_callback(page)
+    job_id = page.locator(f"#{JOB_INPUT_HOME_ID}").input_value()
+    page.locator(f"#{START_BUTTON_HOME_ID}").click()
+    page.wait_for_url(f"**/input/{job_id}", timeout=10000)
+    wait_for_dash_callback(page)
+    logging.info(f"Created job {job_id}")
+
+    # 2. Upload CSV
+    upload_area = page.locator(f"#{CSV_UPLOAD_INPUT_ID}")
+    expect(upload_area).to_be_visible(timeout=5000)
+    upload_area.locator("input[type='file']").set_input_files(SAMPLE_CSV)
+    feedback = page.locator(f"#{UPLOAD_FEEDBACK_DIV_INPUT_ID}")
+    expect(feedback).to_contain_text("File uploaded", timeout=10000)
+    wait_for_dash_callback(page)
+
+    # 3. Enable "Trigger error" checkbox
+    trigger_checkbox = page.locator(f"#{TRIGGER_ERROR_CHECKBOX_ID}")
+    expect(trigger_checkbox).to_be_visible(timeout=5000)
+    trigger_checkbox.check()
+    wait_for_dash_callback(page)
+
+    # 4. Check Input → Submit
+    check_btn = page.locator(f"#{CHECK_INPUT_BUTTON_INPUT_ID}")
+    expect(check_btn).to_be_enabled(timeout=5000)
+    check_btn.click()
+    page.wait_for_url(f"**/job-submission/{job_id}", timeout=10000)
+    wait_for_dash_callback(page)
+
+    submit_btn = page.locator(f"#{SUBMIT_BUTTON_JOB_SUBMISSION_ID}")
+    expect(submit_btn).to_be_enabled(timeout=5000)
+    submit_btn.click()
+    wait_for_dash_callback(page)
+    logging.info("Submitted with trigger_error=True")
+
+    # 5. Wait for FAILED
+    status_div = page.locator(f"#{STATUS_DIV_JOB_SUBMISSION_ID}")
+    max_wait = 60
+    start = time.monotonic()
+    while time.monotonic() - start < max_wait:
+        page.wait_for_timeout(3000)
+        status_text = status_div.text_content()
+        if "FAILED" in status_text:
+            logging.info("Job failed as expected")
+            break
+    else:
+        pytest.fail(f"Job did not fail within {max_wait}s")
+
+    # 6. Click "Change Input" → confirmation modal appears (job is FAILED)
+    change_btn = page.locator(f"#{CHANGE_INPUT_BUTTON_JOB_SUBMISSION_ID}")
+    expect(change_btn).to_be_enabled(timeout=5000)
+    change_btn.click()
+
+    modal = page.locator(f"#{RESET_CONFIRM_MODAL_SHARED_ID}")
+    expect(modal).to_be_visible(timeout=10000)
+    page.locator(f"#{RESET_CONFIRM_BUTTON_SHARED_ID}").click()
+    page.wait_for_url(f"**/input/{job_id}", timeout=10000)
+    wait_for_dash_callback(page)
+
+    # 7. File is pre-populated from job state — verify and disable "Trigger error"
+    feedback = page.locator(f"#{UPLOAD_FEEDBACK_DIV_INPUT_ID}")
+    expect(feedback).to_contain_text("File uploaded", timeout=10000)
+
+    trigger_checkbox = page.locator(f"#{TRIGGER_ERROR_CHECKBOX_ID}")
+    expect(trigger_checkbox).to_be_visible(timeout=5000)
+    trigger_checkbox.uncheck()
+    wait_for_dash_callback(page)
+
+    # 8. Check Input → Resubmit (via modal)
+    check_btn = page.locator(f"#{CHECK_INPUT_BUTTON_INPUT_ID}")
+    expect(check_btn).to_be_enabled(timeout=5000)
+    check_btn.click()
+    page.wait_for_url(f"**/job-submission/{job_id}", timeout=10000)
+    wait_for_dash_callback(page)
+
+    # Job is now PENDING after reset — use Submit (not Resubmit)
+    submit_btn = page.locator(f"#{SUBMIT_BUTTON_JOB_SUBMISSION_ID}")
+    expect(submit_btn).to_be_enabled(timeout=5000)
+    submit_btn.click()
+    wait_for_dash_callback(page)
+    logging.info("Submitted with trigger_error=False")
+
+    # 9. Wait for COMPLETED
+    start = time.monotonic()
+    while time.monotonic() - start < max_wait:
+        page.wait_for_timeout(3000)
+        status_text = status_div.text_content()
+        if "COMPLETED" in status_text:
+            logging.info("Job completed after resubmit")
+            break
+        if "FAILED" in status_text:
+            pytest.fail("Job failed on resubmit — should have succeeded")
+    else:
+        pytest.fail(f"Job did not complete within {max_wait}s")
+
+    # 10. Verify results page loads
+    results_btn = page.locator(f"#{VIEW_RESULTS_BUTTON_JOB_SUBMISSION_ID}")
+    expect(results_btn).to_be_enabled(timeout=5000)
+    results_btn.click()
+    page.wait_for_url(f"**/results/{job_id}", timeout=10000)
+    wait_for_dash_callback(page)
+    expect(page.locator(f"#{SUMMARY_TABLE_RESULTS_ID}")).to_be_visible(timeout=15000)
+    check_all_errors(page)
+    logging.info("Error recovery e2e test passed")

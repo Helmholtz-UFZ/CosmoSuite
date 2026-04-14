@@ -41,6 +41,9 @@ services:
         condition: service_started
       redis:
         condition: service_started
+    volumes:
+      - "./:/python_docker/cosmo_template"
+      - "/python_docker/cosmo_template/.venv"
 
   redis:
     image: redis:7-alpine

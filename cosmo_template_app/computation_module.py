@@ -41,6 +41,7 @@ def profile_csv(
     histogram_bins: int = 30,
     compute_correlation: bool = True,
     top_n_categories: int = 10,
+    trigger_error: bool = False,
 ) -> dict:
     """Read CSV, compute statistical profile, return structured results.
 
@@ -150,6 +151,10 @@ def profile_csv(
     for col in categorical_cols:
         vc = df[col].value_counts().head(top_n_categories)
         value_counts[col] = {str(k): int(v) for k, v in vc.items()}
+
+    if trigger_error:
+        log.info("Trigger error flag is set — dividing by zero")
+        _ = 1 / 0
 
     return {
         "summary": summary,

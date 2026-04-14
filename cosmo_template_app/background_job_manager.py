@@ -10,7 +10,6 @@ from logging.config import dictConfig
 from celery import Celery
 from celery.exceptions import CeleryError
 from celery.result import AsyncResult
-from celery.schedules import crontab
 from celery.signals import worker_process_init
 from kombu.exceptions import OperationalError
 
@@ -34,69 +33,64 @@ class BackgroundJobManager:
     """Centralized manager for all background job operations using Celery."""
 
     def __init__(self):
-        """Initialize the BackgroundJobManager with Celery app."""
+        """Initialize the background job manager."""
         self.app = Celery("cosmo_template")
         self.app.config_from_object(CeleryConfig)
         self.app.conf.update(
             broker_connection_retry_on_startup=True,
             broker_connection_retry=True,
         )
-        self._setup_periodic_tasks()
-
-    def _setup_periodic_tasks(self):
-        """Set up periodic tasks using Celery Beat (replaces APScheduler)."""
-        self.app.conf.beat_schedule = {
-            "cleanup-at-3am": {
-                "task": NAME_CLEANUP_TASK,
-                "schedule": crontab(minute=0, hour=3),  # Every day at 3:00 AM
-                "options": {"queue": "maintenance"},
-            },
-        }
-
-    def submit_computation_job(self, job) -> str:
+    def submit_computation_job(self, job) -> tuple[str | None, bool]:
         """Submit a computation job to the Celery queue.
 
         Args:
             job: Job instance to process
 
         Returns:
-            str: Celery task ID
+            tuple: (celery_task_id, failed_boolean)
+                   celery_task_id is None if submission failed
         """
-        log.info(
-            f"Submitting computation job {job.job_id} to Celery",
-        )
-
-        # Submit to Celery (pass job_id, not job object)
-        result = self.app.send_task(
-            NAME_COMPUTATION_TASK,
-            args=[job.job_id],
-            queue="computation",
-            retry=True,
-            retry_policy={
-                "max_retries": 3,
-                "interval_start": 10,
-                "interval_step": 15,
-                "interval_max": 30,
-            },
-        )
-
-        # Store task name in Redis for revoked task retrieval
-        self.app.backend.client.set(
-            f"task_name:{result.id}",
-            NAME_COMPUTATION_TASK,
-            ex=86400,  # 24 hour TTL
-        )
-
-        log.info(
-            f"Job {job.job_id} submitted with Celery task ID: {result.id}",
-        )
-
-        return result.id, False
+        try:
+            result = self.app.send_task(
+                NAME_COMPUTATION_TASK,
+                args=[job.job_id],
+                queue="computation",
+                retry=True,
+                retry_policy={
+                    "max_retries": 3,
+                    "interval_start": 10,
+                    "interval_step": 15,
+                    "interval_max": 30,
+                },
+            )
+            # Store task name in Redis for revoked task retrieval
+            self.app.backend.client.set(
+                f"task_name:{result.id}",
+                NAME_COMPUTATION_TASK,
+                ex=86400,  # 24 hour TTL
+            )
+            log.info(
+                f"Submitted computation job {job.job_id} with task_id={result.id}"
+            )
+            return result.id, False
+        except (OperationalError, CeleryError) as e:
+            log.error(f"Failed to submit computation job {job.job_id}: {e}")
+            return None, True
 
     def get_job_status(self, task_id: str) -> dict:
-        """Get the status of a Celery task."""
-        result = AsyncResult(task_id, app=self.app)
+        """Get status of a Celery task.
 
+        Args:
+            task_id: The Celery task ID
+
+        Returns:
+            dict: Task status information including:
+                  - task_id: The task ID
+                  - status: Task status (PENDING, STARTED, SUCCESS, FAILURE, etc.)
+                  - result: Task result if ready, None otherwise
+                  - traceback: Traceback if task failed, None otherwise
+        """
+        result = AsyncResult(task_id, app=self.app)
         return {
             "task_id": task_id,
             "status": result.status,
@@ -121,63 +115,128 @@ class BackgroundJobManager:
             if result.status:
                 status = result.status
         except CeleryError as e:
-            log.debug(
-                f"Could not get result info for task {task_id}: {e}",
-            )
+            log.debug(f"Could not get result info for task {task_id}: {e}")
 
         return {"task_name": task_name, "status": status}
 
-    def revoke_job(self, task_id: str, terminate: bool = False) -> None:
-        """Revoke/cancel a running task."""
-        self.app.control.revoke(task_id, terminate=terminate)
-        log.info(
-            f"Task {task_id} revoked (terminate={terminate})",
-        )
-
     def get_all_tasks_overview(self) -> dict:
-        """Get comprehensive overview of all tasks using Celery inspect API."""
+        """Get comprehensive task overview using Celery inspect API.
+
+        Returns:
+            dict: Contains active, reserved, scheduled, revoked tasks and worker list
+                  - active: List of running tasks with worker field
+                  - reserved: List of claimed but not started tasks
+                  - scheduled: List of future-scheduled tasks
+                  - revoked: List of revoked task dicts with "id" and "worker" keys
+                  - workers: List of online worker names
+
+        Raises:
+            ConnectionError: If unable to connect to Redis/Celery broker
+        """
         try:
             inspect = self.app.control.inspect()
 
+            # Get task data from all workers
             active = inspect.active() or {}
             reserved = inspect.reserved() or {}
             scheduled = inspect.scheduled() or {}
-            revoked = inspect.revoked() or {}
-
-            ping_result = inspect.ping() or {}
-            workers = list(ping_result.keys())
+            revoked_dict = inspect.revoked() or {}
 
             def flatten_tasks(worker_dict):
                 """Flatten {worker: [tasks]} to [tasks] with worker info."""
                 result = []
-                for worker, tasks in worker_dict.items():
+                for worker, tasks in (worker_dict or {}).items():
                     for task in tasks:
                         if isinstance(task, dict):
                             task["worker"] = worker
                             result.append(task)
                         else:
+                            # Revoked returns plain ID strings, not dicts
                             result.append({"id": task, "worker": worker})
                 return result
+
+            # Get list of online workers (single call to avoid race with worker shutdown)
+            ping_result = inspect.ping()
+            workers = list(ping_result.keys()) if ping_result else []
 
             return {
                 "active": flatten_tasks(active),
                 "reserved": flatten_tasks(reserved),
                 "scheduled": flatten_tasks(scheduled),
-                "revoked": flatten_tasks(revoked),
+                "revoked": flatten_tasks(revoked_dict),
                 "workers": workers,
             }
         except (OperationalError, ConnectionError) as e:
-            log.warning(f"Failed to connect to Celery broker: {e}")
+            log.warning(f"Failed to connect to Celery broker: {str(e)}")
             raise ConnectionError(
                 "Unable to connect to Celery broker. Ensure Redis is running and accessible."
             ) from e
+
+    def revoke_job(self, task_id: str, terminate: bool = False) -> None:
+        """Revoke/cancel a running or queued task.
+
+        Args:
+            task_id: The Celery task ID
+            terminate: If True, send SIGTERM to worker process (kill)
+                       If False, just prevent execution (cancel)
+        """
+        self.app.control.revoke(task_id, terminate=terminate)
+        log.info(f"Task {task_id} revoked (terminate={terminate})")
+
+    def submit_test_task(self) -> tuple[str | None, bool]:
+        """Submit a test sleep task to the Celery queue.
+
+        Returns:
+            tuple: (celery_task_id, failed_boolean)
+                   celery_task_id is None if submission failed
+        """
+        try:
+            result = self.app.send_task(
+                NAME_TEST_TASK,
+                queue="test",
+            )
+            # Store task name in Redis for revoked task retrieval
+            self.app.backend.client.set(
+                f"task_name:{result.id}",
+                NAME_TEST_TASK,
+                ex=86400,  # 24 hour TTL
+            )
+            log.info(f"Submitted test task with task_id={result.id}")
+            return result.id, False
+        except (OperationalError, CeleryError) as e:
+            log.error(f"Failed to submit test task: {e}")
+            return None, True
+
+    def submit_cleanup_task(self) -> tuple[str | None, bool]:
+        """Submit a maintenance cleanup task to the Celery queue.
+
+        Returns:
+            tuple: (celery_task_id, failed_boolean)
+                   celery_task_id is None if submission failed
+        """
+        try:
+            result = self.app.send_task(
+                NAME_CLEANUP_TASK,
+                queue="default",
+            )
+            # Store task name in Redis for revoked task retrieval
+            self.app.backend.client.set(
+                f"task_name:{result.id}",
+                NAME_CLEANUP_TASK,
+                ex=86400,  # 24 hour TTL
+            )
+            log.info(f"Submitted cleanup task with task_id={result.id}")
+            return result.id, False
+        except (OperationalError, CeleryError) as e:
+            log.error(f"Failed to submit cleanup task: {e}")
+            return None, True
 
 
 _background_job_manager = None
 
 
 def __getattr__(name):
-    """Lazy singleton — BackgroundJobManager is created on first access, not on import."""  # noqa
+    """Lazy singleton — BackgroundJobManager is created on first access, not on import."""
     global _background_job_manager
     if name == "background_job_manager":
         if _background_job_manager is None:

@@ -87,6 +87,16 @@ class ProfileConfig(BaseModel):
         ),
     ]
 
+    trigger_error: Annotated[
+        bool,
+        Field(
+            False,
+            description="Deliberately trigger a division by zero error (for testing)",
+            title="Trigger error",
+            json_schema_extra={"type": "checkbox"},
+        ),
+    ]
+
     upload_file_name: Optional[str] = Field(
         None,
         description="Name of the uploaded CSV file",

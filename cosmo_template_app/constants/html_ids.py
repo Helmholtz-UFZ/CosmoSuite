@@ -35,6 +35,15 @@ NAVBAR_TOGGLER_BUTTON_SHARED_ID = "navbar-toggler-button-shared-id"
 # --- Collapses ---
 NAVBAR_COLLAPSE_DIV_SHARED_ID = "navbar-collapse-div-shared-id"
 
+# --- Reset Confirm Modal ---
+RESET_BODY_DIV_SHARED_ID = "reset-body-div-shared-id"
+RESET_CANCEL_BUTTON_SHARED_ID = "reset-cancel-button-shared-id"
+RESET_CONFIRM_BUTTON_SHARED_ID = "reset-confirm-button-shared-id"
+RESET_CONFIRM_MODAL_SHARED_ID = "reset-confirm-modal-shared-id"
+
+# --- Stores ---
+RESET_JOB_STORE_SHARED_ID = "reset-job-store-shared-id"
+
 
 # =============================================================================
 # HOME
@@ -57,6 +66,7 @@ JOB_FEEDBACK_FORMTEXT_HOME_ID = "job-feedback-formtext-home-id"
 CHECK_INPUT_BUTTON_INPUT_ID = (  # nocheck - used via FormFactory
     "check_input_button_input_id"
 )
+RESET_JOB_BUTTON_INPUT_ID = "reset-job-button-input-id"
 
 # --- Divs ---
 HEADER_DIV_INPUT_ID = "header-div-input-id"  # nocheck - used via landing_page_layout_column
@@ -123,48 +133,51 @@ SUMMARY_TABLE_RESULTS_ID = "summary-table-results-id"  # nocheck - testing only
 # =============================================================================
 
 # --- Buttons ---
-REFRESH_BUTTON_WORKER_MANAGEMENT_ID = "refresh-button-worker-management-id"
-KILL_BUTTON_WORKER_MANAGEMENT_ID = "kill-button-worker-management-id"
-CANCEL_BUTTON_WORKER_MANAGEMENT_ID = "cancel-button-worker-management-id"
-KILL_MODAL_CANCEL_BUTTON_WORKER_MANAGEMENT_ID = (
-    "kill-modal-cancel-button-worker-management-id"
-)
-KILL_MODAL_CONFIRM_BUTTON_WORKER_MANAGEMENT_ID = (
-    "kill-modal-confirm-button-worker-management-id"
-)
 CANCEL_MODAL_CANCEL_BUTTON_WORKER_MANAGEMENT_ID = (
     "cancel-modal-cancel-button-worker-management-id"
 )
 CANCEL_MODAL_CONFIRM_BUTTON_WORKER_MANAGEMENT_ID = (
     "cancel-modal-confirm-button-worker-management-id"
 )
-TEST_JOB_BUTTON_WORKER_MANAGEMENT_ID = "test-job-button-worker-management-id"
+KILL_MODAL_CANCEL_BUTTON_WORKER_MANAGEMENT_ID = (
+    "kill-modal-cancel-button-worker-management-id"
+)
+KILL_MODAL_CONFIRM_BUTTON_WORKER_MANAGEMENT_ID = (
+    "kill-modal-confirm-button-worker-management-id"
+)
+TEST_TASK_BUTTON_WORKER_MANAGEMENT_ID = "test-task-button-worker-management-id"
+WORKER_CANCEL_BTN_WORKER_MANAGEMENT_ID = "worker-cancel-btn-worker-management-id"
+WORKER_KILL_BTN_WORKER_MANAGEMENT_ID = "worker-kill-btn-worker-management-id"
+WORKER_REFRESH_BTN_WORKER_MANAGEMENT_ID = "worker-refresh-btn-worker-management-id"
 
 # --- Divs ---
-DUMMY_DIV_WORKER_MANAGEMENT_ID = "dummy-div-worker-management-id"
-STATS_CARD_DIV_WORKER_MANAGEMENT_ID = "stats-card-div-worker-management-id"
-LAST_REFRESH_DIV_WORKER_MANAGEMENT_ID = "last-refresh-div-worker-management-id"
-KILL_MODAL_TASK_INFO_DIV_WORKER_MANAGEMENT_ID = (
-    "kill-modal-task-info-div-worker-management-id"
-)
 CANCEL_MODAL_TASK_INFO_DIV_WORKER_MANAGEMENT_ID = (
     "cancel-modal-task-info-div-worker-management-id"
 )
-TEST_JOB_FEEDBACK_DIV_WORKER_MANAGEMENT_ID = (
-    "test-job-feedback-div-worker-management-id"
+KILL_MODAL_TASK_INFO_DIV_WORKER_MANAGEMENT_ID = (
+    "kill-modal-task-info-div-worker-management-id"
+)
+WORKER_LAST_REFRESH_DIV_WORKER_MANAGEMENT_ID = (
+    "worker-last-refresh-div-worker-management-id"
+)
+WORKER_MANAGEMENT_DUMMY_COMPONENT_WORKER_MANAGEMENT_ID = (
+    "worker-management-dummy-component-worker-management-id"
+)
+WORKER_STATS_CARD_DIV_WORKER_MANAGEMENT_ID = (
+    "worker-stats-card-div-worker-management-id"
 )
 
 # --- Modals ---
-KILL_MODAL_WORKER_MANAGEMENT_ID = "kill-modal-worker-management-id"
 CANCEL_MODAL_WORKER_MANAGEMENT_ID = "cancel-modal-worker-management-id"
+KILL_MODAL_WORKER_MANAGEMENT_ID = "kill-modal-worker-management-id"
 
 # --- Tables ---
 ACTIVE_TASKS_TABLE_WORKER_MANAGEMENT_ID = "active-tasks-table-worker-management-id"
 RESERVED_TASKS_TABLE_WORKER_MANAGEMENT_ID = "reserved-tasks-table-worker-management-id"
+REVOKED_TASKS_TABLE_WORKER_MANAGEMENT_ID = "revoked-tasks-table-worker-management-id"
 SCHEDULED_TASKS_TABLE_WORKER_MANAGEMENT_ID = (
     "scheduled-tasks-table-worker-management-id"
 )
-REVOKED_TASKS_TABLE_WORKER_MANAGEMENT_ID = "revoked-tasks-table-worker-management-id"
 
 # =============================================================================
 # JOB_MANAGEMENT

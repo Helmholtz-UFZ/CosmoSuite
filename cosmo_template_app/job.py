@@ -21,6 +21,7 @@ from cosmo_template_app.constants import (
     DAYS_DELETE_SUBMITTED,
     LOG_FILE_NAME,
 )
+from cosmo_template_app.db_manager import DbManager, JobTable
 from cosmo_template_app.error_handling import (
     InvalidJobID,
     JobExists,
@@ -32,18 +33,17 @@ from cosmo_template_app.object_storage_manager import (
     get_files,
     save_files,
 )
-from cosmo_template_app.db_manager import JobTable, DbManager
 from cosmo_template_app.pydantic_models import ProfileConfig, validate_job_id
 
 log = logging.getLogger(__name__)
 
 APP_VERSION = "0.1.0"
+SEED = os.urandom(128)
 
 
 def find_unique_job_id() -> str:
     """Find a unique job id."""
-    seed = os.urandom(128)
-    coolname.replace_random(random.Random(seed))
+    coolname.replace_random(random.Random(SEED))
 
     while True:
         job_id = "_".join(coolname.generate(3))
@@ -269,25 +269,14 @@ class Job:
         """Submit job to Celery queue for background processing."""
         log.info(f"Submit job {self.job_id}.")
 
-        if DbManager.set_submitted(self.job_id):
-            self.submitted = True
-            try:
-                celery_task_id, failed = background_job_manager.submit_computation_job(
-                    self
-                )
-            except Exception as e:  # catch-all: submission can fail for many reasons  # noqa
-                log.error(
-                    f"Job {self.job_id} failed to start.\n{repr(e)}",
-                )
-                failed = True
-                celery_task_id = None
-        else:
-            log.debug(
-                f"Job {self.job_id} was already submitted.",
-            )
+        if not DbManager.set_submitted(self.job_id):
+            log.debug(f"Job {self.job_id} was already submitted.")
             return
 
+        self.submitted = True
+        _celery_task_id, failed = background_job_manager.submit_computation_job(self)
         if failed:
+            log.error(f"Job {self.job_id} failed to start.")
             self.status = "FAILED"
         else:
             self.status = "RUNNING"
@@ -314,6 +303,18 @@ class Job:
             return "bg-danger"
         else:
             return "bg-secondary"
+
+    def reset(self):
+        """Reset job to PENDING and clean all results (keeps uploaded CSV)."""
+        log.info(f"Reset job {self.job_id}")
+        self.status = "PENDING"
+        for file in os.listdir(self.working_dir):
+            if file == self.model.upload_file_name:
+                continue
+            self.delete_item(file)
+        self.delete_logs()
+        self.dump_parameters()
+        self.save()
 
     def delete_logs(self):
         """Delete the logs."""

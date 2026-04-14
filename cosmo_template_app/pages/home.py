@@ -28,8 +28,8 @@ log = logging.getLogger(__name__)
 dash.register_page(__name__, path="/")
 
 header = create_header(
-    "Create new job",
-    "CSV Statistical Profiler",
+    "Welcome to Cosmo-Template",
+    "Try it out and create a new job",
     bg_color="bg-info",
 )
 
@@ -42,6 +42,18 @@ def layout():
     return page_container_column_layout(
         [
             header,
+            dbc.Row(
+                dbc.Col(
+                    html.Img(
+                        src="/static/start_banner.jpg",
+                        # no Bootstrap class for specific viewport-relative height
+                        style={"height": "45vh"},
+                        className="rounded mx-auto d-block m-3",
+                        alt="Welcome",
+                    ),
+                    className="text-center",
+                ),
+            ),
             dbc.Row(
                 dbc.Col(
                     [

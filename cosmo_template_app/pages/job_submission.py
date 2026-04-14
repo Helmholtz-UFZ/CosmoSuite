@@ -22,15 +22,22 @@ from cosmo_template_app.constants import (
     JOB_STORE_JOB_SUBMISSION_ID,
     LOADING_OVERLAY_MODAL_SHARED_ID,
     MAIN_CONTENT_DIV_JOB_SUBMISSION_ID,
+    RESET_JOB_STORE_SHARED_ID,
     RESUBMIT_BUTTON_JOB_SUBMISSION_ID,
     STATUS_DIV_JOB_SUBMISSION_ID,
     SUBMIT_BUTTON_JOB_SUBMISSION_ID,
     URL_LOCATION_SHARED_ID,
     VIEW_RESULTS_BUTTON_JOB_SUBMISSION_ID,
 )
+from cosmo_template_app.error_handling import InvalidJobID, JobNotFound
 from cosmo_template_app.files_route import create_download_button
 from cosmo_template_app.job import Job
-from cosmo_template_app.layouts import create_job_header, form_layout_template, landing_page_layout_column
+from cosmo_template_app.layouts import (
+    create_job_header,
+    form_layout_template,
+    job_not_found_layout,
+    landing_page_layout_column,
+)
 
 log = logging.getLogger(__name__)
 
@@ -61,8 +68,8 @@ status_button_config = {
     },
     "COMPLETED": {
         "disabled_submit": True,
-        "disabled_change_input": True,
-        "disabled_resubmit": True,
+        "disabled_change_input": False,
+        "disabled_resubmit": False,
         "disabled_results": False,
     },
 }
@@ -148,7 +155,11 @@ def layout(job_id):
 )
 def load_submission_content(job_id):
     """Load submission page content with input summary, buttons, and logs."""
-    job = Job(job_id=job_id)
+    try:
+        job = Job(job_id=job_id)
+    except (InvalidJobID, JobNotFound) as e:
+        log.info(f"Job not accessible {job_id}: {e}")
+        return job_not_found_layout(job_id)
 
     # Read-only form showing configured parameters
     read_only_factory = FormFactory(job.model, form_layout_template, active=False)
@@ -266,6 +277,8 @@ def open_loading_overlay(*args):
     Output(VIEW_RESULTS_BUTTON_JOB_SUBMISSION_ID, "disabled"),
     Output(STATUS_DIV_JOB_SUBMISSION_ID, "children"),
     Output(ACCORDION_JOB_SUBMISSION_ID, "active_item"),
+    Output(HEADER_DIV_JOB_SUBMISSION_ID, "children", allow_duplicate=True),
+    Output(RESET_JOB_STORE_SHARED_ID, "data", allow_duplicate=True),
     Input(INTERVAL_JOB_SUBMISSION_ID, "n_intervals"),
     Input(SUBMIT_BUTTON_JOB_SUBMISSION_ID, "n_clicks"),
     Input(CHANGE_INPUT_BUTTON_JOB_SUBMISSION_ID, "n_clicks"),
@@ -299,12 +312,23 @@ def submission_manager(
         job.delete_logs()
         job.submit()
     elif RESUBMIT_BUTTON_JOB_SUBMISSION_ID in triggered_ids:
-        job.delete_logs()
-        job.submit()
+        # Trigger confirmation modal
+        return tuple(
+            [dash.no_update, False]
+            + [dash.no_update] * (num_outputs - 3)
+            + [{"job_id": job.job_id, "action": "resubmit"}]
+        )
     elif CHANGE_INPUT_BUTTON_JOB_SUBMISSION_ID in triggered_ids:
-        input_base = dash.page_registry["pages.input"]["path_template"]
-        input_path = input_base.replace("<job_id>", job.job_id)
-        return tuple([input_path] + [dash.no_update] * (num_outputs - 1))
+        if job.status == "PENDING":
+            input_base = dash.page_registry["pages.input"]["path_template"]
+            input_path = input_base.replace("<job_id>", job.job_id)
+            return tuple([input_path] + [dash.no_update] * (num_outputs - 1))
+        # Non-PENDING: trigger confirmation modal
+        return tuple(
+            [dash.no_update, False]
+            + [dash.no_update] * (num_outputs - 3)
+            + [{"job_id": job.job_id, "action": "change_input"}]
+        )
     elif VIEW_RESULTS_BUTTON_JOB_SUBMISSION_ID in triggered_ids:
         results_base = dash.page_registry["pages.results"]["path_template"]
         results_path = results_base.replace("<job_id>", job.job_id)
@@ -332,4 +356,6 @@ def submission_manager(
         cfg["disabled_results"],
         status_info,
         active_item,
+        create_job_header("Job Submission", job),
+        dash.no_update,
     )

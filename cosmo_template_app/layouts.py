@@ -2,16 +2,49 @@
 
 import dash
 import dash_bootstrap_components as dbc
-from dash import Input, Output, State, callback, dcc, html
-from dash_form_factory import InputField
+import logging
+
+from dash import Input, Output, State, callback, callback_context, dcc, html
+from dash_form_factory import FormFactory, InputField
 
 from cosmo_template_app.constants import (
     LOADING_OVERLAY_MODAL_SHARED_ID,
     NAVBAR_COLLAPSE_DIV_SHARED_ID,
     NAVBAR_TOGGLER_BUTTON_SHARED_ID,
+    RESET_BODY_DIV_SHARED_ID,
+    RESET_CANCEL_BUTTON_SHARED_ID,
+    RESET_CONFIRM_BUTTON_SHARED_ID,
+    RESET_CONFIRM_MODAL_SHARED_ID,
+    RESET_JOB_STORE_SHARED_ID,
     URL_LOCATION_SHARED_ID,
 )
 from cosmo_template_app.error_handling import error_modal
+from cosmo_template_app.job import Job
+from cosmo_template_app.pydantic_models import ProfileConfig
+
+reset_confirm_modal = dbc.Modal(
+    [
+        dbc.ModalHeader("Confirm Reset"),
+        dbc.ModalBody(id=RESET_BODY_DIV_SHARED_ID),
+        dbc.ModalFooter(
+            [
+                dbc.Button(
+                    "Cancel",
+                    id=RESET_CANCEL_BUTTON_SHARED_ID,
+                    color="secondary",
+                ),
+                dbc.Button(
+                    "Confirm",
+                    id=RESET_CONFIRM_BUTTON_SHARED_ID,
+                    color="danger",
+                ),
+            ]
+        ),
+    ],
+    id=RESET_CONFIRM_MODAL_SHARED_ID,
+    is_open=False,
+    centered=True,
+)
 
 loading_overlay = dbc.Modal(
     dbc.ModalBody(
@@ -37,6 +70,8 @@ def app_layout():
             create_navbar(),
             dash.page_container,
             loading_overlay,
+            reset_confirm_modal,
+            dcc.Store(id=RESET_JOB_STORE_SHARED_ID),
         ],
     )
 
@@ -52,7 +87,7 @@ def create_navbar():
                         href=dash.page_registry["pages.home"]["relative_path"],
                         children=[
                             html.Img(
-                                src="/static/icon_white.svg",
+                                src="/static/icon_navbar.svg",
                                 width="30",
                                 height="30",
                                 className="d-inline-block align-text-top",
@@ -146,6 +181,13 @@ def create_job_header(title, job):
     return create_header(title, job.model.job_id, bg_color=bg_color)
 
 
+def job_not_found_layout(job_id):
+    """Return header and body for a job that cannot be loaded."""
+    header = create_header("Job not found", job_id, bg_color="bg-danger")
+    body = html.Div(f"Job not found: {job_id}", className="text-center m-3")
+    return header, body
+
+
 form_layout_template = dbc.Card(
     [
         dbc.CardHeader("Profiling Options", className="text-center fs-5"),
@@ -165,11 +207,20 @@ form_layout_template = dbc.Card(
                     ],
                     className="mb-3",
                 ),
+                dbc.Row(
+                    [
+                        dbc.Col(InputField("trigger_error"), md=6),
+                    ],
+                    className="mb-3",
+                ),
             ],
         ),
     ],
     className="my-3",
 )
+
+form_factory = FormFactory(ProfileConfig, form_layout_template)
+form_layout = form_factory.process_layout(form_factory.layout)
 
 
 def landing_page_layout_column(
@@ -210,3 +261,64 @@ def page_container_column_layout(content, main_content_id="main-content-containe
         className="flex-grow-1 d-flex justify-content-center g-0",
     )
     return page
+
+
+log = logging.getLogger(__name__)
+
+
+@callback(
+    Output(RESET_CONFIRM_MODAL_SHARED_ID, "is_open", allow_duplicate=True),
+    Output(RESET_BODY_DIV_SHARED_ID, "children"),
+    Input(RESET_JOB_STORE_SHARED_ID, "data"),
+    prevent_initial_call=True,
+)
+def open_reset_modal(store_data):
+    """Open the reset confirmation modal when the store receives data."""
+    if store_data is None:
+        return False, dash.no_update
+    if store_data["action"] == "resubmit":
+        msg = "This will reset the job to PENDING, delete all results, and resubmit."
+    else:
+        msg = "This will reset the job to PENDING and delete all results."
+    return True, msg
+
+
+@callback(
+    Output(RESET_CONFIRM_MODAL_SHARED_ID, "is_open", allow_duplicate=True),
+    Output(URL_LOCATION_SHARED_ID, "href", allow_duplicate=True),
+    Output(RESET_JOB_STORE_SHARED_ID, "data", allow_duplicate=True),
+    Output(LOADING_OVERLAY_MODAL_SHARED_ID, "is_open", allow_duplicate=True),
+    Input(RESET_CONFIRM_BUTTON_SHARED_ID, "n_clicks"),
+    Input(RESET_CANCEL_BUTTON_SHARED_ID, "n_clicks"),
+    State(RESET_JOB_STORE_SHARED_ID, "data"),
+    prevent_initial_call=True,
+)
+def handle_reset_confirm(confirm_clicks, cancel_clicks, store_data):
+    """Handle confirm/cancel on the reset modal."""
+    triggered_ids = {
+        t["prop_id"].split(".")[0]
+        for t in callback_context.triggered
+        if t["value"] is not None
+    }
+
+    if RESET_CANCEL_BUTTON_SHARED_ID in triggered_ids:
+        return False, dash.no_update, None, dash.no_update
+
+    if RESET_CONFIRM_BUTTON_SHARED_ID in triggered_ids:
+        job = Job(job_id=store_data["job_id"])
+        job.reset()
+
+        if store_data["action"] == "resubmit":
+            job.submit()
+            path = f"/job-submission/{job.job_id}"
+        else:
+            path = f"/input/{job.job_id}"
+
+        return False, path, None, False
+
+    return (
+        dash.no_update,
+        dash.no_update,
+        dash.no_update,
+        dash.no_update,
+    )

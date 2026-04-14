@@ -10,7 +10,6 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, callback_context, dcc, html
 from dash_form_factory import FormFactory
-
 from cosmo_template_app.constants import (
     CHECK_INPUT_BUTTON_INPUT_ID,
     CSV_UPLOAD_INPUT_ID,
@@ -18,18 +17,21 @@ from cosmo_template_app.constants import (
     HEADER_DIV_INPUT_ID,
     JOB_STORE_INPUT_ID,
     MAIN_CONTENT_DIV_INPUT_ID,
+    RESET_JOB_BUTTON_INPUT_ID,
+    RESET_JOB_STORE_SHARED_ID,
     UPLOAD_FEEDBACK_DIV_INPUT_ID,
     UPLOADED_FILE_NAME_STORE_INPUT_ID,
     URL_LOCATION_SHARED_ID,
 )
-from cosmo_template_app.error_handling import FileValidationError
+from cosmo_template_app.error_handling import FileValidationError, InvalidJobID, JobNotFound
 from cosmo_template_app.job import Job
 from cosmo_template_app.layouts import (
     create_job_header,
+    form_factory,
     form_layout_template,
+    job_not_found_layout,
     landing_page_layout_column,
 )
-from cosmo_template_app.pydantic_models import ProfileConfig
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +39,6 @@ dash.register_page(
     __name__,
     path_template="/input/<job_id>",
 )
-
-factory = FormFactory(ProfileConfig, form_layout_template)
-form_layout = factory.process_layout(factory.layout)
 
 upload_component = dcc.Upload(
     id=CSV_UPLOAD_INPUT_ID,
@@ -79,13 +78,44 @@ def layout(job_id):
 )
 def load_input_content(job_id):
     """Load the input page content after job store is populated."""
-    content = html.Div(
+    try:
+        job = Job(job_id=job_id)
+    except (InvalidJobID, JobNotFound) as e:
+        log.info(f"Job not accessible {job_id}: {e}")
+        return job_not_found_layout(job_id)
+
+    if job.status == "PENDING":
+        content = _build_editable_content(job)
+    else:
+        content = _build_readonly_content(job)
+
+    return create_job_header("Input", job), content
+
+
+def _build_editable_content(job):
+    """Build editable input form pre-populated with job values."""
+    active_factory = FormFactory(job.model, form_layout_template)
+    form = active_factory.process_layout(active_factory.layout)
+
+    if job.model.upload_file_name is not None:
+        upload_data = {
+            "file_name": job.model.upload_file_name,
+            "valid": True,
+            "message": (
+                f"File uploaded: {job.model.upload_file_name}."
+                " To change the file, upload a new one."
+            ),
+        }
+    else:
+        upload_data = None
+
+    return html.Div(
         [
             dcc.Store(id=FORM_VALID_STORE_INPUT_ID, data=False),
-            dcc.Store(id=UPLOADED_FILE_NAME_STORE_INPUT_ID, data=None),
+            dcc.Store(id=UPLOADED_FILE_NAME_STORE_INPUT_ID, data=upload_data),
             dbc.Row(dbc.Col(upload_component), className="m-3"),
             html.Div(id=UPLOAD_FEEDBACK_DIV_INPUT_ID, className="mx-3"),
-            dbc.Row(dbc.Col(form_layout), className="m-3"),
+            dbc.Row(dbc.Col(form), className="m-3"),
             dbc.Row(
                 dbc.Col(
                     dbc.Button(
@@ -103,8 +133,52 @@ def load_input_content(job_id):
             ),
         ],
     )
-    job = Job(job_id=job_id)
-    return create_job_header("Input", job), content
+
+
+def _build_readonly_content(job):
+    """Build read-only view for non-PENDING jobs with info badge."""
+    readonly_factory = FormFactory(job.model, form_layout_template, active=False)
+    form = readonly_factory.process_layout(readonly_factory.layout)
+
+    if job.status == "RUNNING":
+        badge_text = "Job is currently running."
+    else:
+        badge_text = "Job must be reset before editing inputs."
+
+    parts = [
+        dbc.Alert(badge_text, color="info", className="text-center m-3"),
+    ]
+
+    if job.model.upload_file_name:
+        parts.append(
+            dbc.Alert(
+                f"File: {job.model.upload_file_name}",
+                color="secondary",
+                className="mx-3",
+            )
+        )
+
+    parts.append(dbc.Row(dbc.Col(form), className="m-3"))
+
+    if job.status != "RUNNING":
+        parts.append(
+            dbc.Row(
+                dbc.Col(
+                    dbc.Button(
+                        [
+                            html.I(className="bi bi-arrow-repeat me-1"),
+                            "Reset Job",
+                        ],
+                        id=RESET_JOB_BUTTON_INPUT_ID,
+                        color="warning",
+                    ),
+                    className="text-center",
+                ),
+                className="m-3",
+            )
+        )
+
+    return html.Div(parts)
 
 
 @callback(
@@ -197,12 +271,12 @@ def update_feedback(form_valid, upload_data):
 
 @callback(
     output={
-        **factory.produce_callback_outputs(),
+        **form_factory.produce_callback_outputs(),
         "form_valid": Output(FORM_VALID_STORE_INPUT_ID, "data"),
         "redirect": Output(URL_LOCATION_SHARED_ID, "pathname"),
     },
     inputs={
-        **factory.produce_callback_inputs(),
+        **form_factory.produce_callback_inputs(),
         "check": Input(CHECK_INPUT_BUTTON_INPUT_ID, "n_clicks"),
     },
     state={
@@ -219,13 +293,13 @@ def check_input(**inputs):
         if t["value"] is not None
     }
 
-    valid, output_dict = factory.validate_callback(inputs)
+    valid, output_dict = form_factory.validate_callback(inputs)
     output_dict["form_valid"] = valid
     output_dict["redirect"] = dash.no_update
 
     if CHECK_INPUT_BUTTON_INPUT_ID in triggered_ids and valid:
         job_id = inputs["job_id"]
-        model = factory.set_model(inputs)
+        model = form_factory.set_model(inputs)
         model.job_id = job_id
         model.upload_file_name = inputs["uploaded_file_name"]["file_name"]
         job = Job(job_id=job_id)
@@ -238,3 +312,14 @@ def check_input(**inputs):
         output_dict["redirect"] = submission_base.replace("<job_id>", str(job_id))
 
     return output_dict
+
+
+@callback(
+    Output(RESET_JOB_STORE_SHARED_ID, "data", allow_duplicate=True),
+    Input(RESET_JOB_BUTTON_INPUT_ID, "n_clicks"),
+    State(JOB_STORE_INPUT_ID, "data"),
+    prevent_initial_call=True,
+)
+def trigger_reset_from_input(n_clicks, job_id):
+    """Write to the shared reset store to trigger the confirmation modal."""
+    return {"job_id": job_id, "action": "change_input"}

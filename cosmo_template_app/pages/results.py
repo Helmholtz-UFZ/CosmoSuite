@@ -25,7 +25,7 @@ from cosmo_template_app.constants import (
 from cosmo_template_app.error_handling import InvalidJobID, JobNotFound
 from cosmo_template_app.files_route import create_download_button
 from cosmo_template_app.job import Job
-from cosmo_template_app.layouts import create_job_header, landing_page_layout_column
+from cosmo_template_app.layouts import create_job_header, job_not_found_layout, landing_page_layout_column
 
 log = logging.getLogger(__name__)
 
@@ -60,13 +60,8 @@ def load_results(job_id):
     try:
         job = Job(job_id=job_id)
     except (InvalidJobID, JobNotFound) as e:
-        log.error(f"Failed to load job {job_id}: {e}")
-        return (
-            dash.no_update,
-            html.Div(
-                f"Could not load job: {e}", className="text-center text-danger m-3"
-            ),
-        )
+        log.info(f"Job not accessible {job_id}: {e}")
+        return job_not_found_layout(job_id)
 
     result_path = os.path.join(job.working_dir, "result.json")
     if not os.path.exists(result_path):
