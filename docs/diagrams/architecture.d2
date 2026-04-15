@@ -1,0 +1,41 @@
+direction: down
+
+browser: Browser {
+  shape: rectangle
+}
+
+dash: Dash (Flask) {
+  shape: rectangle
+}
+
+redis: Redis {
+  shape: cylinder
+}
+
+minio: MinIO {
+  shape: cylinder
+}
+
+postgres: PostgreSQL {
+  shape: cylinder
+}
+
+worker: Celery Worker {
+  shape: rectangle
+}
+
+computation: computation_module {
+  shape: rectangle
+}
+
+browser -> dash
+
+dash -> redis
+dash -> minio
+dash -> postgres
+
+redis -> worker
+minio -> worker
+postgres -> worker
+
+worker -> computation
