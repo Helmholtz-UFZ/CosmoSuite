@@ -17,7 +17,7 @@ Use `./dev_up.sh -d` to enable debug mode (auto-reload on code changes).
 ## Architecture
 
 <div align="center">
-  <img src="docs/diagrams/architecture.svg" width="50%" alt="Architecture">
+  <img src="docs/diagrams/architecture.svg" width="70%" alt="Architecture">
 </div>
 
 ### Services (docker-compose.yml)
