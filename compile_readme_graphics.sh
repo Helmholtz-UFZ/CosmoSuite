@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 
-d2 "docs/diagrams/architecture.d2" "docs/diagrams/architecture.svg"
+drawio -x -f svg -e -b 10 -o "docs/diagrams/architecture.svg" "docs/diagrams/architecture.drawio"
+drawio -x -f png -e -b 10 -o "docs/diagrams/architecture.png" "docs/diagrams/architecture.drawio"
