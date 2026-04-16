@@ -245,16 +245,21 @@ class Job:
         except JobNotFound:
             self.save()
 
-    def save(self):
-        """Save the job information to the database."""
-        log.debug(f"Save job {self.job_id}")
-        save_files(self.job_id)
+    def save_to_db(self):
+        """Save the job attributes to the database."""
+        log.debug(f"Save job {self.job_id} to database")
         column_names = JobTable.__table__.columns.keys()
         data_to_insert = {name: self._get_column_data(name) for name in column_names}
         for key, value in data_to_insert.items():
             if key == "input_data":
                 ProfileConfig(**json.loads(value))
         DbManager.add_entry(data_to_insert)
+
+    def save(self):
+        """Save the job files to object storage and attributes to the database."""
+        log.debug(f"Save job {self.job_id}")
+        save_files(self.job_id)
+        self.save_to_db()
 
     def delete(self, delete_work_dir=True, delete_db=True):
         """Delete the job from the database and storage."""
@@ -274,6 +279,12 @@ class Job:
             return
 
         self.submitted = True
+
+        # Upload files BEFORE submitting to Celery — the worker may write to
+        # remote storage immediately, which would cause save_files' verification
+        # to see unexpected files and fail.
+        save_files(self.job_id)
+
         _celery_task_id, failed = background_job_manager.submit_computation_job(self)
         if failed:
             log.error(f"Job {self.job_id} failed to start.")
@@ -281,7 +292,7 @@ class Job:
         else:
             self.status = "RUNNING"
 
-        self.save()
+        self.save_to_db()
 
     def time_to_life(self):
         """Return the number of days after which this job will be deleted."""
