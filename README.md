@@ -162,8 +162,8 @@ pre-commit run --all-files
 ├── docker/                        # Dockerfiles
 ├── docker-compose.yml             # Service orchestration
 ├── docs/
-│   ├── conventions/               # Coding conventions (mainly for AI assitant)
-│   └── skills/                    # Step-by-step guides for common tasks (mainly for AI assitant)
+│   ├── conventions/               # Coding conventions (mainly for AI assistant)
+│   └── skills/                    # Guides for common tasks (mainly for AI assistant)
 ├── env_*                          # Environment variable files (dev, test, ci)
 ├── run_pytest.sh                  # Test runner (spins up containers)
 ├── src/                           # Main application package
@@ -172,7 +172,7 @@ pre-commit run --all-files
 │   ├── background_job_manager.py  # Celery configuration
 │   ├── celery_app.py              # Celery worker entry point
 │   ├── celery_config.py           # Celery broker/beat settings
-│   ├── computation_module.py      # CSV statistical profiler
+│   ├── computation_module.py  <-- # the example CSV statistical profiler
 │   ├── config.py                  # Environment variables
 │   ├── constants/                 # HTML IDs, general constants
 │   ├── db_manager.py              # SQLAlchemy models
@@ -183,8 +183,10 @@ pre-commit run --all-files
 │   ├── object_storage_manager.py  # MinIO file operations via rclone
 │   ├── pages/                     # Dash pages
 │   │   ├── home.py
+│   │   ├── input.py           <-- # Input page for computation parameters
+│   │   ├── results.py         <-- # Page that shows results of computation module
 │   │   ...
-│   ├── pydantic_models.py         # ProfileConfig model
+│   ├── pydantic_models.py     <-- # the example model ProfileConfig
 │   ├── static/                    # Images, icons
 │   ├── tasks/                     # Celery task definitions
 │   │   ├── computation_tasks.py
@@ -196,4 +198,36 @@ pre-commit run --all-files
 │       │   ...
 └── test/                          # All tests
     ├── artifacts/                 # Playwright artifacts on E2E failure
+    ├── conftest.py                # Sets up server etc for testing
+    ├── test_e2e.py                # Main integration test
+    ...
 ```
+
+The files marked with `<--` above are the main entry points you'll edit when
+adapting the template to a new service with its own background computation.
+
+### `computation_module.py`
+
+The real core — this is where your actual Python project lives.
+
+### `pydantic_models.py`
+
+The bridge between the service and the computation module. It defines the job
+parameters and lets `dash-form-factory` generate the matching web form in
+`pages/input.py` automatically.
+
+### `pages/input.py`
+
+For simple inputs this needs only a minimal edit, but it can easily be expanded
+depending on how your input data is acquired.
+
+### `pages/results.py`
+
+This is where you'll likely spend most of your time adapting the template. Use
+the full range of data visualisation tools that ship with the Dash framework.
+
+### Other modules
+
+Other modules can of course be tailored to your specific use case. Reuse the
+existing structure where it fits — `constants/html_ids.py`, `layouts.py`.
+`job.py` is also a good place to add new job-specific methods.
