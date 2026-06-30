@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import pytest
 
-from src.computation_module import profile_csv
+from cosmo_framework.computation_module import profile_csv
 
 
 @pytest.fixture

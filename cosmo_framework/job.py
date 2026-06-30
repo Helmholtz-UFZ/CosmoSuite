@@ -13,27 +13,27 @@ from typing import Literal
 import coolname
 from werkzeug.utils import secure_filename
 
-from src.background_job_manager import background_job_manager
-from src.computation_module import validate_csv
-from src.config import JOB_WORK_DIR_TEMPLATE
-from src.constants import (
+from cosmo_framework.background_job_manager import background_job_manager
+from cosmo_framework.computation_module import validate_csv
+from cosmo_framework.config import JOB_WORK_DIR_TEMPLATE
+from cosmo_framework.constants import (
     DAYS_DELETE_NOT_SUBMITTED,
     DAYS_DELETE_SUBMITTED,
     LOG_FILE_NAME,
 )
-from src.db_manager import DbManager, JobTable
-from src.error_handling import (
+from cosmo_framework.db_manager import DbManager, JobTable
+from cosmo_framework.error_handling import (
     InvalidJobID,
     JobExists,
     JobNotFound,
 )
-from src.object_storage_manager import (
+from cosmo_framework.object_storage_manager import (
     delete_directory_from_storage,
     delete_file_from_storage,
     get_files,
     save_files,
 )
-from src.pydantic_models import ProfileConfig, validate_job_id
+from cosmo_framework.pydantic_models import ProfileConfig, validate_job_id
 
 log = logging.getLogger(__name__)
 

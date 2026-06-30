@@ -45,11 +45,11 @@ import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, html, no_update, register_page
 from dash.exceptions import PreventUpdate
 
-from src.background_job_manager import (
+from cosmo_framework.background_job_manager import (
     NAME_COMPUTATION_TASK,
     background_job_manager,
 )
-from src.constants import (
+from cosmo_framework.constants import (
     ACTIVE_TASKS_TABLE_WORKER_MANAGEMENT_ID,
     CANCEL_MODAL_CANCEL_BUTTON_WORKER_MANAGEMENT_ID,
     CANCEL_MODAL_CONFIRM_BUTTON_WORKER_MANAGEMENT_ID,
@@ -71,7 +71,7 @@ from src.constants import (
     WORKER_REFRESH_BTN_WORKER_MANAGEMENT_ID,
     WORKER_STATS_CARD_DIV_WORKER_MANAGEMENT_ID,
 )
-from src.layouts import create_header, page_container_column_layout
+from cosmo_framework.layouts import create_header, page_container_column_layout
 
 log = logging.getLogger(__name__)
 

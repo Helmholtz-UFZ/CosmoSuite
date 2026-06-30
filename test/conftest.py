@@ -20,7 +20,7 @@ from playwright.sync_api import Page
 from slugify import slugify
 from sqlalchemy.exc import OperationalError
 
-from src.config import (
+from cosmo_framework.config import (
     OBJECT_STORAGE_SECRET_KEY,
     PORT,
     POSTGRES_PASSWORD,
@@ -29,7 +29,7 @@ from src.config import (
     REDIS_PASSWORD,
     REDIS_PORT,
 )
-from src.db_manager import DbManager
+from cosmo_framework.db_manager import DbManager
 
 
 def create_logger():
@@ -84,7 +84,7 @@ def pytest_configure(config):
         pytest.exit("rclone command not available")
 
     try:
-        from src.object_storage_manager import (
+        from cosmo_framework.object_storage_manager import (
             ObjectStorageError,
             create_bucket,
             setup_remote,
@@ -224,7 +224,7 @@ def dash_app(request):
     if skip_services:
         pytest.skip("Skipping dash_app fixture (--no-services flag set)")
 
-    from src.app import app
+    from cosmo_framework.app import app
 
     port = int(PORT)
     srv = make_server("localhost", port, app.server)
@@ -287,7 +287,7 @@ def celery_worker(request):
             "run",
             "celery",
             "-A",
-            "src.celery_app.celery",
+            "cosmo_framework.celery_app.celery",
             "worker",
             "--loglevel=debug",
             "--concurrency=1",

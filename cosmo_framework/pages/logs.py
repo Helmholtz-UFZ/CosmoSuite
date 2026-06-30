@@ -24,7 +24,7 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, ctx, dcc, html, no_update
 
-from src.constants import (
+from cosmo_framework.constants import (
     AUTO_POLL_INTERVAL_LOGS_ID,
     DATE_RANGE_DATEPICKER_LOGS_ID,
     END_HOUR_INPUT_LOGS_ID,
@@ -41,9 +41,9 @@ from src.constants import (
     TIME_ERROR_DIV_LOGS_ID,
     TIME_INPUT_GROUP_LOGS_ID,
 )
-from src.layouts import create_header, page_container_column_layout
-from src.logs_table import format_logs_list
-from src.db_manager import DbManager
+from cosmo_framework.layouts import create_header, page_container_column_layout
+from cosmo_framework.logs_table import format_logs_list
+from cosmo_framework.db_manager import DbManager
 
 dash.register_page(
     __name__,

@@ -48,7 +48,7 @@ RUN uv sync --frozen
 USER appuser
 
 CMD if [ "$GUNICORN" = 1 ] ; then \
-        exec gunicorn --preload -w 4 -b 0.0.0.0:$FLASK_PORT src.app:server; \
+        exec gunicorn --preload -w 4 -b 0.0.0.0:$FLASK_PORT cosmo_framework.app:server; \
     else \
-        exec python3 /python_docker/cosmo_template/src/app.py; \
+        exec python3 /python_docker/cosmo_template/cosmo_framework/app.py; \
     fi

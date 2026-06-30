@@ -13,14 +13,14 @@ from celery.result import AsyncResult
 from celery.signals import worker_process_init
 from kombu.exceptions import OperationalError
 
-from src.celery_config import CeleryConfig
-from src.logger import get_logger_config_worker
+from cosmo_framework.celery_config import CeleryConfig
+from cosmo_framework.logger import get_logger_config_worker
 
 log = logging.getLogger(__name__)
 
-NAME_COMPUTATION_TASK = "src.tasks.computation_tasks.start_computation"
-NAME_CLEANUP_TASK = "src.tasks.maintenance_tasks.cleanup"
-NAME_TEST_TASK = "src.tasks.test_tasks.long_running_test"
+NAME_COMPUTATION_TASK = "cosmo_framework.tasks.computation_tasks.start_computation"
+NAME_CLEANUP_TASK = "cosmo_framework.tasks.maintenance_tasks.cleanup"
+NAME_TEST_TASK = "cosmo_framework.tasks.test_tasks.long_running_test"
 
 
 @worker_process_init.connect

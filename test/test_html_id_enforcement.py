@@ -30,8 +30,8 @@ from typing import Dict, List, Set, Tuple
 
 
 def get_src_path() -> Path:
-    """Get path to src directory."""
-    return Path(__file__).parent.parent / "src"
+    """Get path to the cosmo_framework package directory."""
+    return Path(__file__).parent.parent / "cosmo_framework"
 
 
 def get_html_ids_path() -> Path:

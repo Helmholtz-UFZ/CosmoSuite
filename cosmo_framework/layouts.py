@@ -7,7 +7,7 @@ import logging
 from dash import Input, Output, State, callback, callback_context, dcc, html
 from dash_form_factory import FormFactory, InputField
 
-from src.constants import (
+from cosmo_framework.constants import (
     LOADING_OVERLAY_MODAL_SHARED_ID,
     NAVBAR_COLLAPSE_DIV_SHARED_ID,
     NAVBAR_TOGGLER_BUTTON_SHARED_ID,
@@ -18,9 +18,9 @@ from src.constants import (
     RESET_JOB_STORE_SHARED_ID,
     URL_LOCATION_SHARED_ID,
 )
-from src.error_handling import error_modal
-from src.job import Job
-from src.pydantic_models import ProfileConfig
+from cosmo_framework.error_handling import error_modal
+from cosmo_framework.job import Job
+from cosmo_framework.pydantic_models import ProfileConfig
 
 reset_confirm_modal = dbc.Modal(
     [

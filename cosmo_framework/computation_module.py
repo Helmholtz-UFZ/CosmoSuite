@@ -9,7 +9,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-from src.error_handling import FileValidationError
+from cosmo_framework.error_handling import FileValidationError
 
 log = logging.getLogger(__name__)
 

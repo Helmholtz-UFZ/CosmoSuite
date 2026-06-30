@@ -15,17 +15,17 @@ import plotly.express as px
 import plotly.graph_objects as go
 from dash import Input, Output, callback, dcc, html
 
-from src.constants import (
+from cosmo_framework.constants import (
     BACK_BUTTON_RESULTS_ID,
     HEADER_DIV_RESULTS_ID,
     JOB_STORE_RESULTS_ID,
     MAIN_CONTENT_DIV_RESULTS_ID,
     SUMMARY_TABLE_RESULTS_ID,
 )
-from src.error_handling import InvalidJobID, JobNotFound
-from src.files_route import create_download_button
-from src.job import Job
-from src.layouts import (
+from cosmo_framework.error_handling import InvalidJobID, JobNotFound
+from cosmo_framework.files_route import create_download_button
+from cosmo_framework.job import Job
+from cosmo_framework.layouts import (
     create_job_header,
     job_not_found_layout,
     landing_page_layout_column,

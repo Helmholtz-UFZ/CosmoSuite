@@ -12,10 +12,10 @@ import pytest
 
 from playwright.sync_api import expect
 
-from src.config import PORT
-from src.layouts import form_factory
+from cosmo_framework.config import PORT
+from cosmo_framework.layouts import form_factory
 from test.help_functions_tests import check_all_errors, wait_for_dash_callback
-from src.constants import (
+from cosmo_framework.constants import (
     ACCORDION_JOB_SUBMISSION_ID,
     BACK_BUTTON_RESULTS_ID,
     CHANGE_INPUT_BUTTON_JOB_SUBMISSION_ID,

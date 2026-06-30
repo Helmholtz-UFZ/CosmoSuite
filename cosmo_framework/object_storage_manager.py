@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 
-from src.config import (
+from cosmo_framework.config import (
     JOB_WORK_DIR_TEMPLATE,
     OBJECT_STORAGE_ACCESS_KEY,
     OBJECT_STORAGE_BUCKET,

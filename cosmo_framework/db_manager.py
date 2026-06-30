@@ -19,14 +19,14 @@ from sqlalchemy import (
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-from src.config import (
+from cosmo_framework.config import (
     POSTGRES_DB,
     POSTGRES_HOST_NAME,
     POSTGRES_PASSWORD,
     POSTGRES_PORT,
     POSTGRES_USER,
 )
-from src.error_handling import JobNotFound
+from cosmo_framework.error_handling import JobNotFound
 
 log = logging.getLogger(__name__)
 

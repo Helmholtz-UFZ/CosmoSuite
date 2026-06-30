@@ -45,4 +45,4 @@ USER appuser
 RUN uv sync --no-dev --frozen
 
 # Setup rclone config and start gunicorn
-CMD uv run gunicorn -w 4 -b 0.0.0.0:$FLASK_PORT src.app:server
+CMD uv run gunicorn -w 4 -b 0.0.0.0:$FLASK_PORT cosmo_framework.app:server

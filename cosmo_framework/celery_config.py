@@ -2,7 +2,7 @@
 
 from celery.schedules import crontab
 
-from src.config import REDIS_DB, REDIS_HOST, REDIS_PASSWORD, REDIS_PORT
+from cosmo_framework.config import REDIS_DB, REDIS_HOST, REDIS_PASSWORD, REDIS_PORT
 
 
 def _get_redis_port():
@@ -53,8 +53,8 @@ class CeleryConfig:
 
     # Task routing
     task_routes = {
-        "src.tasks.computation_tasks.*": {"queue": "computation"},
-        "src.tasks.maintenance_tasks.*": {"queue": "maintenance"},
+        "cosmo_framework.tasks.computation_tasks.*": {"queue": "computation"},
+        "cosmo_framework.tasks.maintenance_tasks.*": {"queue": "maintenance"},
     }
 
     # Default queue settings
@@ -99,7 +99,7 @@ class CeleryConfig:
 
     beat_schedule = {
         "cleanup-at-3am": {
-            "task": "src.tasks.maintenance_tasks.cleanup",
+            "task": "cosmo_framework.tasks.maintenance_tasks.cleanup",
             "schedule": crontab(minute=0, hour=3),
             "options": {"queue": "maintenance"},
         },
