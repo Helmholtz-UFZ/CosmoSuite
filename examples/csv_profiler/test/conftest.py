@@ -281,12 +281,6 @@ def celery_worker(request):
     _worker_log_path = pathlib.Path(worker_log_file.name)
 
     worker_env = {**os.environ, "PYTHONUNBUFFERED": "1"}
-    # csv_profiler lives under examples/csv_profiler and is not installed (2a uses
-    # pythonpath, not an editable install). pytest's pythonpath does not reach this
-    # subprocess, so put the example package dir on the worker's PYTHONPATH.
-    _example_root = str(pathlib.Path(__file__).resolve().parent.parent)
-    _existing_pp = worker_env["PYTHONPATH"] if "PYTHONPATH" in worker_env else ""
-    worker_env["PYTHONPATH"] = _example_root + os.pathsep + _existing_pp
     worker_process = subprocess.Popen(
         [
             "uv",

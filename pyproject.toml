@@ -16,9 +16,6 @@ dependencies = [
     "coolname>=2.2.0,<3",
     "gunicorn>=23.0.0,<24",
     "pydantic>=2.0.0,<3",
-    "dash-form-factory==0.1.9",
-    "pandas>=2.0.0,<3",
-    "numpy>=1.26.0,<3",
 ]
 
 [dependency-groups]
@@ -31,10 +28,9 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-# "." makes cosmo_framework importable; the examples path makes csv_profiler
-# importable so this repo's CI can exercise the framework via the example.
-pythonpath = [".", "examples/csv_profiler"]
-testpaths = ["test", "examples/csv_profiler/test"]
+# Framework-scope tests only; the example runs its own suite (examples/csv_profiler).
+pythonpath = "."
+testpaths = ["test"]
 
 [build-system]
 requires = ["hatchling"]

@@ -3,6 +3,7 @@ __pycache__
 .python-version
 .env
 examples/csv_profiler/work_dir/*
+examples/csv_profiler/test/artifacts/
 *swp
 *swo
 python_path
@@ -20,3 +21,9 @@ SOUL.md
 USER.md
 docs/diagrams/*.png
 docs/diagrams/*.bkp
+
+# Build artifacts
+dist/
+
+# Runtime job working dirs (any location)
+work_dir/

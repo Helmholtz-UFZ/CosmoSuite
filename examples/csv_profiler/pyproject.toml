@@ -6,13 +6,19 @@ readme = "README.md"
 license = { text = "EUPL-1.2" }
 requires-python = ">=3.13"
 dependencies = [
-    # The shared framework. The concrete source (a local path for --local-core dev,
-    # or a git+https tag for real deployments) is wired in commit 2b; see the README.
     "cosmo-framework",
     "dash-form-factory==0.1.9",
     "pandas>=2.0.0,<3",
     "numpy>=1.26.0,<3",
 ]
+
+# In this monorepo the framework is resolved from the local path (editable) so the
+# example runs against the working tree. A real downstream app would instead pin a
+# git tag, e.g.:
+#   [project.dependencies] "cosmo-framework @ git+https://codebase.helmholtz.cloud/.../cosmo-framework@v0.1.0"
+# See the README (--local-core dev loop + tagged-release note).
+[tool.uv.sources]
+cosmo-framework = { path = "../..", editable = true }
 
 [dependency-groups]
 dev = [

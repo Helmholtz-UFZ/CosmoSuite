@@ -8,7 +8,7 @@ stages:
   - "test"
 
 variables:
-  # Used by GitLab to initialise the postgres service container
+  # Used by GitLab to initialise the postgres service container (example-test)
   POSTGRES_DB: cosmo_template
   POSTGRES_USER: cosmo_template_user
   POSTGRES_PASSWORD: test
@@ -17,15 +17,19 @@ variables:
   OBJECT_STORAGE_ACCESS_KEY: "accesskey"
   OBJECT_STORAGE_SECRET_KEY: "secretkey"
 
-linting:
+# =========================================================================
+# Framework (root package: cosmo_framework/)
+# =========================================================================
+
+framework-lint:
   stage: "lint"
   image: "python:3.13"
   before_script:
     - "pip install uv"
     - "uv sync"
   script:
-    - "uv run ruff format --check ."
-    - "uv run ruff check ."
+    - "uv run ruff format --check cosmo_framework test"
+    - "uv run ruff check cosmo_framework test"
 
 # Gate: the framework package must stay domain-free (no CSV-profiler references).
 # The CSV profiler lives in examples/csv_profiler/ and depends on the framework.
@@ -40,7 +44,32 @@ domain-free:
       fi
       echo "OK: cosmo_framework/ is domain-free."
 
-test:
+# Framework-scope tests (static id enforcement, etc.) — no services needed.
+framework-test:
+  stage: "test"
+  image: "python:3.13"
+  before_script:
+    - "pip install uv"
+    - "uv sync"
+  script:
+    - "uv run pytest test/ -v"
+
+# =========================================================================
+# Example app (examples/csv_profiler/) — consumes the framework
+# =========================================================================
+
+example-lint:
+  stage: "lint"
+  image: "python:3.13"
+  before_script:
+    - "pip install uv"
+    - "cd examples/csv_profiler"
+    - "uv sync"
+  script:
+    - "uv run ruff format --check ."
+    - "uv run ruff check ."
+
+example-test:
   stage: "test"
   image: "python:3.13"
   services:
@@ -56,6 +85,7 @@ test:
       alias: redis
   before_script:
     - apt-get update && apt-get install -y postgresql-client curl rclone
+    - cd examples/csv_profiler
     - "cp env_ci .env"
     - "source .env"
     - "rclone config create minio s3 provider=Minio access_key_id=${OBJECT_STORAGE_ACCESS_KEY} secret_access_key=${OBJECT_STORAGE_SECRET_KEY} endpoint=${OBJECT_STORAGE_HOST}"
@@ -73,4 +103,4 @@ test:
     when: on_failure
     expire_in: 7 days
     paths:
-      - test/artifacts/
+      - examples/csv_profiler/test/artifacts/
