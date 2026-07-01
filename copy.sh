@@ -61,7 +61,7 @@ rsync -a --exclude='.git/' \
          --exclude='.venv/' \
          --exclude='.env' \
          --exclude='.docker_build_hash' \
-         --exclude='src/work_dir/*' \
+         --exclude='cosmo_framework/work_dir/*' \
          --exclude='celerybeat-schedule*' \
          --exclude='test/artifacts/' \
          --exclude='uv.lock' \
@@ -83,12 +83,12 @@ echo
 echo "Done! New project created at: $DEST"
 echo
 echo "Files to customize with your branding:"
-echo "  src/static/start_banner.png  — Main banner image"
-echo "  src/static/icon.svg          — App icon (navbar, favicon)"
-echo "  src/static/icon_white.svg    — White variant of icon"
-echo "  src/static/small_icon.png    — Small icon variant"
-echo "  src/assets/favicon.ico       — Browser favicon"
-echo "  src/pages/home.py            — Home page welcome text"
+echo "  cosmo_framework/static/start_banner.png  — Main banner image"
+echo "  cosmo_framework/static/icon.svg          — App icon (navbar, favicon)"
+echo "  cosmo_framework/static/icon_white.svg    — White variant of icon"
+echo "  cosmo_framework/static/small_icon.png    — Small icon variant"
+echo "  cosmo_framework/assets/favicon.ico       — Browser favicon"
+echo "  cosmo_framework/pages/home.py            — Home page welcome text"
 echo "  README.md                         — Project description"
 echo
 echo "Next steps:"

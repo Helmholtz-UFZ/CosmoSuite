@@ -1,0 +1,33 @@
+# This environment file is used for development in a docker setup. Start everything via
+# docker compose up or use dev_up.sh script.
+
+### Development variables ###
+DOCKER_UID=1000
+DOCKER_GID=1000
+FLASK_DEBUG=1
+GUNICORN=0
+
+###  Webserver ###
+WEB_WORK_DIR="./work_dir"
+FLASK_PORT=8080
+WEB_OUTSIDE_URL="http://localhost:8080"
+
+### Postgres credentials ###
+POSTGRES_DB="cosmo_template"
+POSTGRES_HOST_NAME="postgres"
+POSTGRES_PORT="5432"
+POSTGRES_USER="cosmo_template_user"
+POSTGRES_PASSWORD="test"
+
+### Minio ###
+OBJECT_STORAGE_ACCESS_KEY="accesskey"
+OBJECT_STORAGE_BUCKET="cosmo-template-jobs"
+OBJECT_STORAGE_HOST="http://minio:9000"
+OBJECT_STORAGE_REMOTE_NAME="cosmo-template-remote"
+OBJECT_STORAGE_SECRET_KEY="secretkey"
+
+### Redis ###
+REDIS_HOST="redis"
+REDIS_PORT="6379"
+REDIS_DB="0"
+REDIS_PASSWORD=""

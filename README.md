@@ -1,233 +1,103 @@
-# Cosmo Template
+# Cosmo Framework
 
-A working reference app that showcases the Dash + Celery + PostgreSQL + MinIO framework
-used by COSMOPOLITAN and COSMONAUT. The app demonstrates how to integrate a Python
-computation module into the framework using a CSV statistical profiler as the example.
+The shared **Dash + Celery + PostgreSQL + MinIO** application framework for the Cosmo
+Suite (sister apps [COSMOPOLITAN](../cosmopolitan) and [COSMONAUT](../ufz-cosmonaut)).
+The framework owns the *workflow machinery* — the app shell, job lifecycle, Celery
+wiring, object storage, logging, error handling, and the infra/ops pages — while a
+**domain** provides *what flows through it* (its config model, computation, forms, and
+workflow pages).
 
-## Quick Start
+This repo is the framework's home. It also ships a reference domain,
+[`examples/csv_profiler/`](examples/csv_profiler/) — a CSV statistical profiler — that
+depends on the framework and is the recommended starting point for a new app.
 
-```bash
-./dev_up.sh
+## Repo layout
+
+```
+cosmo-framework/
+├── cosmo_framework/        # the published package (domain-free) — the wheel
+├── examples/csv_profiler/  # reference domain: depends on the framework, NOT in the wheel
+│   ├── csv_profiler/        # the example's Python package (app, ProfileConfig, pages, …)
+│   ├── docker/  docker-compose.yml  dev_up.sh  run_pytest.sh  env_*  # its runtime
+│   └── test/                # the integration/e2e suite
+├── test/                   # framework-scope tests (html-id enforcement)
+├── docs/                   # design docs + conventions
+└── pyproject.toml          # name = "cosmo-framework"; wheel packages = ["cosmo_framework"]
 ```
 
-Open http://localhost:8080 to access the application.
+## Consuming the framework
 
-Use `./dev_up.sh -d` to enable debug mode (auto-reload on code changes).
+Apps consume `cosmo-framework` as a **pinned git-tag dependency** (not a clone), the
+way `dash_form_factory` is already shared across the suite:
 
-## Architecture
+```toml
+[project]
+dependencies = [
+    "cosmo-framework @ git+https://codebase.helmholtz.cloud/.../cosmo-framework@v0.1.0",
+]
+```
 
-<div align="center">
-  <img src="docs/diagrams/architecture.svg" width="70%" alt="Architecture">
-</div>
+Auth uses `CI_JOB_TOKEN` / SSH; `uv` locks the resolved commit. A domain plugs itself
+into the framework by injecting three `Job` seams at startup — see the
+[config-model contract](docs/conventions/config_model_contract.md).
 
-### Services (docker-compose.yml)
+### Start a new app
 
-| Service                 | Image             | Purpose                            |
-| ----------------------- | ----------------- | ---------------------------------- |
-| `cosmo-template`        | dev.Dockerfile    | Dash web app (Gunicorn)            |
-| `cosmo-template-worker` | worker.Dockerfile | Celery worker                      |
-| `postgres`              | postgres:15       | Job metadata, logs, Celery results |
-| `redis`                 | redis:7           | Celery message broker              |
-| `minio`                 | minio/minio       | Object storage for job files       |
+Copy `examples/csv_profiler/` as your starting point, replace the domain pieces
+(`ProfileConfig`, `computation_module`, `forms`, workflow pages, computation task), and
+point the `cosmo-framework` dependency at a released tag.
 
-### Data Flow
+### `--local-core` dev loop
 
-1. User uploads CSV and configures profiling parameters on the input page
-2. Job is created in PostgreSQL, CSV and parameters saved to MinIO
-3. User reviews configuration and submits the job on the job submission page
-4. Celery worker picks up the task, downloads CSV and parameters from MinIO
-5. `computation_module.py` runs the statistical profiler
-6. Results (JSON) saved to MinIO, job status updated in PostgreSQL
-7. Results page renders summary table, charts, and correlation heatmap
+To develop the framework and an app together, mount the framework source into the
+running containers instead of using the installed copy (see
+`examples/csv_profiler/docker-compose.local_pkg.yml`): mount `../../cosmo_framework`
+and prepend it to `PYTHONPATH`. The mount target is the directory *containing*
+`cosmo_framework`. Within this monorepo the example already resolves the framework from
+the local path (`[tool.uv.sources]` in the example's `pyproject.toml`), so
+`uv sync` in `examples/csv_profiler/` runs it against the working tree.
 
-### Core Modules
+### Releasing (two-step, tagged)
 
-| Module                      | Purpose                                                |
-| --------------------------- | ------------------------------------------------------ |
-| `app.py`                    | Dash app initialization and Flask server               |
-| `celery_app.py`             | Celery worker entry point                              |
-| `celery_config.py`          | Celery broker, result backend, and beat settings       |
-| `computation_module.py`     | CSV statistical profiler (the example computation)     |
-| `config.py`                 | Environment variable loading and validation            |
-| `db_manager.py`             | SQLAlchemy models: Job, LogEntry                       |
-| `error_handling.py`         | Central error handler and error modal                  |
-| `job.py`                    | Job lifecycle: create work dir, save files, sync MinIO |
-| `background_job_manager.py` | Celery app config, task submission                     |
-| `layouts.py`                | Reusable layout components (navbar, page wrapper)      |
-| `logger.py`                 | Logging configuration                                  |
-| `object_storage_manager.py` | MinIO file operations via rclone                       |
-| `pydantic_models.py`        | `ProfileConfig` — job configuration model              |
+1. Publish the framework: bump `version` in `pyproject.toml` and tag it on `main`.
+2. Bump the `cosmo-framework` pin in each consumer's `pyproject.toml` **and** `uv.lock`.
 
-### Pages
+**The pin bump must land on `main` and be tagged before any image build** — a scheduled
+`build-latest-tag` checks out the latest tag, so an untagged bump would silently ship
+the old framework.
 
-| Page              | Path                       | Purpose                          |
-| ----------------- | -------------------------- | -------------------------------- |
-| Home              | `/`                        | Welcome page                     |
-| Input             | `/input/<job_id>`          | Upload CSV, configure parameters |
-| Job Submission    | `/job-submission/<job_id>` | Review config, submit, monitor   |
-| Results           | `/results/<job_id>`        | View profiling results           |
-| Job Management    | `/job-management`          | List/delete jobs                 |
-| Logs              | `/logs`                    | Application log viewer           |
-| Worker Management | `/worker-management`       | Celery worker status             |
+## Framework vs domain (Phase 1)
 
-## Environment Configuration
+The framework owns the **shell + infra/ops pages** and the job/task machinery; the
+**workflow pages** stay domain-side until the Layer-B page/result seam:
 
-Three env files:
+| Framework (`cosmo_framework/`)                                   | Domain (`examples/csv_profiler/`)                    |
+| ---------------------------------------------------------------- | ---------------------------------------------------- |
+| `job.py` (generic `Job` + 3 injected seams), `layouts.py` (shell)| `app.py` (composes shell + wires seams), `forms.py`  |
+| `background_job_manager.py`, `celery_app.py`/`celery_config.py`  | `pydantic_models.py` (`ProfileConfig`), `computation_module.py` |
+| `config`, `db_manager`, `object_storage_manager`, `logger`, errors | `tasks/computation_tasks.py`, domain constants     |
+| pages: `logs`, `job_management`, `worker_management`             | pages: `home`, `input`, `results`, `job_submission`  |
 
-- `env_dev` — local Docker development
-- `env_test` — local pytest (used by `run_pytest.sh`)
-- `env_ci` — CI pipeline
+The framework package is kept **domain-free** — a CI gate fails if any CSV-profiler
+reference appears under `cosmo_framework/`.
 
-`dev_up.sh` copies `env_dev` to `.env` on each run.
+## Running the example
+
+```bash
+cd examples/csv_profiler
+uv sync                      # framework (editable, local path) + example deps
+./dev_up.sh                  # app + worker via docker compose  →  http://localhost:8080
+./run_pytest.sh              # starts postgres/minio/redis and runs the suite
+```
 
 ## Testing
 
-```bash
-# Full test suite (spins up Postgres, Redis, MinIO automatically)
-./run_pytest.sh
+- **Framework:** `uv run pytest test/` at the repo root (static id enforcement); plus
+  the `ruff` lint and the domain-free grep gate (`.gitlab-ci.yml`).
+- **Example (integration + e2e):** from `examples/csv_profiler/`, `./run_pytest.sh`.
 
-# See available flags
-./run_pytest.sh --help
-```
+## Conventions & design
 
-Test files in `test/`:
-
-- `test_computation_module.py` — unit tests for `profile_csv()`
-- `test_db_manager.py` — database operations
-- `test_background_job_manager.py` — Celery task submission
-- `test_e2e.py` — Playwright end-to-end test
-- `test_env.py` — environment variable completeness
-- `test_html_id_enforcement.py` — HTML ID constant usage
-- `conftest.py` — shared fixtures (database, MinIO, Celery)
-- `help_functions_tests.py` — test utility helpers
-
-When the E2E test fails, Playwright artifacts (screenshots, traces) are saved
-to `test/artifacts/` for debugging.
-
-## Setting Up Your Own Project
-
-### 1. Bootstrap from the template
-
-```bash
-./copy.sh <new_project_name> <destination_directory>
-# Example:
-./copy.sh my_awesome_app /home/user/projects/my-awesome-app
-```
-
-This copies the template, renames all references, and prints a list of branded
-files to customize (banner images, icons, home page text).
-
-### 2. Replace the CSV profiler with your computation
-
-In the new project directory:
-
-1. **Replace `computation_module.py`** with your own computation logic
-2. **Update `pydantic_models.py`** — change `ProfileConfig` to your config model
-3. **Update `tasks/computation_tasks.py`** — adapt the Celery task to call your module
-4. **Update `pages/input.py`** — adjust the upload/form for your input format
-5. **Update `pages/results.py`** — display your computation's output
-6. **Update tests** — replace `test_computation_module.py` with tests for your module
-
-### 3. Extract your computation module (optional)
-
-When your computation module grows beyond a single file, extract it into a separate
-Python package:
-
-1. Create a new git repo with its own `pyproject.toml` (publishable to PyPI or a
-   private index)
-2. Add it as a dependency in this project's `pyproject.toml`
-3. Activate `docker-compose.local_pkg.yml`: update it to mount your local package
-   checkout into web and worker containers
-4. Enable `--local-computation-module` in `dev_up.sh`: remove the error guard, wire
-   it to use the compose override file
-
-See COSMOPOLITAN's `docker-compose.local-smp.yml` and COSMONAUT's
-`docker-compose.local-sr.yml` as working examples of this pattern.
-
-## Code Quality
-
-```bash
-# Pre-commit hooks
-pre-commit install
-pre-commit run --all-files
-```
-
-## File Structure
-
-```
-.
-├── CLAUDE.md                      # AI assistant project instructions
-├── copy.sh                        # Bootstrap new project from template
-├── dev_up.sh                      # Start dev environment (docker-compose)
-├── docker/                        # Dockerfiles
-├── docker-compose.yml             # Service orchestration
-├── docs/
-│   ├── conventions/               # Coding conventions (mainly for AI assistant)
-│   └── skills/                    # Guides for common tasks (mainly for AI assistant)
-├── env_*                          # Environment variable files (dev, test, ci)
-├── run_pytest.sh                  # Test runner (spins up containers)
-├── src/                           # Main application package
-│   ├── app.py                     # Dash app initialization
-│   ├── assets/                    # CSS, favicon
-│   ├── background_job_manager.py  # Celery configuration
-│   ├── celery_app.py              # Celery worker entry point
-│   ├── celery_config.py           # Celery broker/beat settings
-│   ├── computation_module.py  <-- # the example CSV statistical profiler
-│   ├── config.py                  # Environment variables
-│   ├── constants/                 # HTML IDs, general constants
-│   ├── db_manager.py              # SQLAlchemy models
-│   ├── error_handling.py          # Central error handler
-│   ├── job.py                     # Job lifecycle management
-│   ├── layouts.py                 # Reusable layout components
-│   ├── logger.py                  # Logging configuration
-│   ├── object_storage_manager.py  # MinIO file operations via rclone
-│   ├── pages/                     # Dash pages
-│   │   ├── home.py
-│   │   ├── input.py           <-- # Input page for computation parameters
-│   │   ├── results.py         <-- # Page that shows results of computation module
-│   │   ...
-│   ├── pydantic_models.py     <-- # the example model ProfileConfig
-│   ├── static/                    # Images, icons
-│   ├── tasks/                     # Celery task definitions
-│   │   ├── computation_tasks.py
-│   │   ...
-│   └── work_dir/                  # Runtime job working directories
-│       ├── example_job_dir/
-│       │   ├── logs
-│       │   ├── parameters.json
-│       │   ...
-└── test/                          # All tests
-    ├── artifacts/                 # Playwright artifacts on E2E failure
-    ├── conftest.py                # Sets up server etc for testing
-    ├── test_e2e.py                # Main integration test
-    ...
-```
-
-The files marked with `<--` above are the main entry points you'll edit when
-adapting the template to a new service with its own background computation.
-
-### `computation_module.py`
-
-The real core — this is where your actual Python project lives.
-
-### `pydantic_models.py`
-
-The bridge between the service and the computation module. It defines the job
-parameters and lets `dash-form-factory` generate the matching web form in
-`pages/input.py` automatically.
-
-### `pages/input.py`
-
-For simple inputs this needs only a minimal edit, but it can easily be expanded
-depending on how your input data is acquired.
-
-### `pages/results.py`
-
-This is where you'll likely spend most of your time adapting the template. Use
-the full range of data visualisation tools that ship with the Dash framework.
-
-### Other modules
-
-Other modules can of course be tailored to your specific use case. Reuse the
-existing structure where it fits — `constants/html_ids.py`, `layouts.py`.
-`job.py` is also a good place to add new job-specific methods.
+See [`docs/conventions/`](docs/conventions/) and the design docs in
+[`docs/plan/`](docs/plan/) (`framework-generalization.md`,
+`cosmo-core-package-boundary.md`).
