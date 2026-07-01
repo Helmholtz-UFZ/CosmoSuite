@@ -35,13 +35,13 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /python_docker/cosmo_template
 
-ENV PYTHONPATH=/python_docker/cosmo_template/:/python_docker/cosmo_template/examples/csv_profiler/
-ENV PATH="/python_docker/cosmo_template/.venv/bin:$PATH"
-
-# Copy dependency files
+# Build context is the repo root, so cosmo-framework (a local-path dependency of the
+# example) is present. Copy the repo, then install the EXAMPLE project — which pulls
+# cosmo-framework editable from ../.. — into the example's own venv.
 COPY --chown=appuser:appuser . .
 
-# Install dependencies
+WORKDIR /python_docker/cosmo_template/examples/csv_profiler
+ENV PATH="/python_docker/cosmo_template/examples/csv_profiler/.venv/bin:$PATH"
 RUN uv sync --frozen
 
 # Switch to non-root user
@@ -50,5 +50,5 @@ USER appuser
 CMD if [ "$GUNICORN" = 1 ] ; then \
         exec gunicorn --preload -w 4 -b 0.0.0.0:$FLASK_PORT csv_profiler.app:server; \
     else \
-        exec python3 /python_docker/cosmo_template/examples/csv_profiler/csv_profiler/app.py; \
+        exec python3 csv_profiler/app.py; \
     fi

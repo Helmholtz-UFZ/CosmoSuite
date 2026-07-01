@@ -36,13 +36,12 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /python_docker/cosmo_template
 
-ENV PYTHONPATH=/python_docker/cosmo_template/:/python_docker/cosmo_template/examples/csv_profiler/
-ENV PATH="/python_docker/cosmo_template/.venv/bin:$PATH"
-
-# Copy dependency files
+# Build context is the repo root (see dev.Dockerfile): copy the repo, then install
+# the EXAMPLE project (which pulls cosmo-framework editable from ../..) into its venv.
 COPY --chown=appuser:appuser . .
 
-# Install dependencies
+WORKDIR /python_docker/cosmo_template/examples/csv_profiler
+ENV PATH="/python_docker/cosmo_template/examples/csv_profiler/.venv/bin:$PATH"
 RUN uv sync --frozen
 
 # Switch to non-root user

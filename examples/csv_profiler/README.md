@@ -40,10 +40,30 @@ would silently ship the old framework.
 
 ## Run it
 
+**Prerequisites:** Docker (daemon running) and [uv](https://docs.astral.sh/uv/).
+Run everything from `examples/csv_profiler/`.
+
 ```bash
-uv sync                    # installs cosmo-framework (editable) + the example deps
-./run_pytest.sh            # starts postgres/minio/redis and runs the test suite
-./dev_up.sh                # brings the app + worker up via docker compose
+uv sync         # install the example + cosmo-framework (editable, local path) into a venv
+./dev_up.sh     # build & start app + worker + postgres/minio/redis via docker compose
+```
+
+Open **http://localhost:8080**, upload a CSV, and watch the profiling job run. Stop
+the stack with **Ctrl-C** (it tears the containers down on exit). `./dev_up.sh -d`
+enables debug mode (auto-reload on code changes).
+
+### Tests
+
+```bash
+./run_pytest.sh   # starts postgres/minio/redis, runs the suite, tears everything down
+```
+
+The end-to-end tests drive a browser with Playwright. If you hit a
+`BrowserType.launch: Executable doesn't exist` error, install the matching browser
+once:
+
+```bash
+uv run playwright install chromium
 ```
 
 ### `--local-core` dev loop

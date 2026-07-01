@@ -34,13 +34,12 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /python_docker/cosmo_template
 
-ENV PYTHONPATH=/python_docker/cosmo_template/:/python_docker/cosmo_template/examples/csv_profiler/
-
-# Copy dependency files
+# Build context is the repo root (see dev.Dockerfile): copy the repo, then install
+# the EXAMPLE project (framework editable from ../..) as appuser, without dev deps.
 COPY --chown=appuser:appuser . .
 
-# Install dependencies as appuser
 RUN chown appuser:appuser /python_docker/cosmo_template
+WORKDIR /python_docker/cosmo_template/examples/csv_profiler
 USER appuser
 RUN uv sync --no-dev --frozen
 

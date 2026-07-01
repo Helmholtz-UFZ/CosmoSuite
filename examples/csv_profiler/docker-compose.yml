@@ -3,8 +3,10 @@ services:
     image: cosmo-template-webserver
     container_name: cosmo-template-webserver
     build:
-      context: .
-      dockerfile: ./docker/dev.Dockerfile
+      # Repo root: the example depends on cosmo-framework by local path, so the
+      # framework source must be in the build context.
+      context: ../..
+      dockerfile: examples/csv_profiler/docker/dev.Dockerfile
       network: host
     env_file: .env
     environment:
@@ -20,15 +22,17 @@ services:
       redis:
         condition: service_started
     volumes:
-      - "./:/python_docker/cosmo_template"
-      - "/python_docker/cosmo_template/.venv"
+      # Mount the whole repo (framework + example live) for reload; the anonymous
+      # volume preserves the image-built venv over the bind mount.
+      - "../..:/python_docker/cosmo_template"
+      - "/python_docker/cosmo_template/examples/csv_profiler/.venv"
 
   cosmo-template-worker:
     image: cosmo-template-worker
     container_name: cosmo-template-worker
     build:
-      context: .
-      dockerfile: ./docker/worker.Dockerfile
+      context: ../..
+      dockerfile: examples/csv_profiler/docker/worker.Dockerfile
       network: host
     env_file: .env
     environment:
@@ -42,8 +46,10 @@ services:
       redis:
         condition: service_started
     volumes:
-      - "./:/python_docker/cosmo_template"
-      - "/python_docker/cosmo_template/.venv"
+      # Mount the whole repo (framework + example live) for reload; the anonymous
+      # volume preserves the image-built venv over the bind mount.
+      - "../..:/python_docker/cosmo_template"
+      - "/python_docker/cosmo_template/examples/csv_profiler/.venv"
 
   redis:
     image: redis:7-alpine

@@ -1,0 +1,25 @@
+# Docker build context = repo root (the example depends on cosmo-framework by local
+# path, so the framework source must be in the context). Keep the context lean and
+# never copy host-built virtualenvs into the image.
+
+# Virtual environments (host-built; wrong platform for the image)
+.venv
+**/.venv
+flask_venv
+
+# Python caches
+__pycache__
+**/__pycache__
+*.pyc
+
+# VCS + tooling caches
+.git
+.ruff_cache
+.pytest_cache
+
+# Build + runtime artifacts
+dist
+**/work_dir
+**/test/artifacts
+.docker_build_hash
+.env
