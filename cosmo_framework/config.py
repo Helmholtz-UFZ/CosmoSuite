@@ -2,7 +2,7 @@
 
 import os
 
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 
 def getenv(name):
@@ -20,7 +20,10 @@ def getenv(name):
     return value
 
 
-load_dotenv()
+# Search from the CWD (the running app's directory), not from this file's location.
+# The framework is installed away from the consumer app (site-packages, or the repo
+# root in this monorepo), so its `.env` lives with the app, not next to config.py.
+load_dotenv(find_dotenv(usecwd=True))
 
 # Needed for the test_env.py. Update!
 env_vars = [
