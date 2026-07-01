@@ -45,11 +45,6 @@ from cosmo_framework.layouts import create_header, page_container_column_layout
 from cosmo_framework.logs_table import format_logs_list
 from cosmo_framework.db_manager import DbManager
 
-dash.register_page(
-    __name__,
-    path_template="/logs",
-)
-
 DEFAULT_EXCLUDED_MODULES = ["beat", "logs", "layout", "db_manager"]
 
 
@@ -488,3 +483,12 @@ def log_manager(
             }
         )
         return result
+
+
+# Registered with an explicit "pages.*" key + layout so an app can import this
+# framework page across the package boundary (not via local pages_folder discovery).
+dash.register_page(
+    "pages.logs",
+    path_template="/logs",
+    layout=layout,
+)

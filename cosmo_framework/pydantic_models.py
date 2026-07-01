@@ -1,12 +1,18 @@
-"""Pydantic models for cosmo_template job configuration."""
+"""Framework pydantic models: job-id validation + the base job-config contract.
+
+`BaseJobConfig` is the contract for a Job's `model`. A domain provides a config
+model that subclasses it (adding its own fields) and injects it via
+`Job.config_model` at startup. Every domain config model therefore carries the
+generic `job_id` and `upload_file_name` fields the framework `Job` relies on to
+persist, reload, and track the single uploaded input file without knowing the
+domain. See docs/plan/cosmo-core-package-boundary.md (config-model contract).
+"""
 
 import logging
 import re
-from typing import Literal, Optional
+from typing import Annotated, Optional
 
-from pydantic import AfterValidator, ConfigDict, Field
-from pydantic import BaseModel
-from typing import Annotated
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 log = logging.getLogger(__name__)
 
@@ -33,73 +39,17 @@ def validate_job_id(job_id: str) -> str:
     return job_id
 
 
-class ProfileConfig(BaseModel):
-    """Configuration for CSV statistical profiling."""
+class BaseJobConfig(BaseModel):
+    """Base contract for a Job's configuration model.
 
-    columns: Optional[list[str]] = Field(
-        None,
-        description="Which columns to analyze (default: all)",
-        title="Columns",
-        json_schema_extra={"type": "dropdown-checklist"},
-    )
-
-    handle_missing: Annotated[
-        Literal["drop", "fill_mean", "fill_zero", "keep"],
-        Field(
-            "drop",
-            description="How to handle missing values",
-            title="Handle missing values",
-            json_schema_extra={"type": "select"},
-        ),
-    ]
-
-    histogram_bins: Annotated[
-        int,
-        Field(
-            30,
-            description="Number of bins for histograms (5–200)",
-            title="Histogram bins",
-            ge=5,
-            le=200,
-            json_schema_extra={"type": "integer"},
-        ),
-    ]
-
-    compute_correlation: Annotated[
-        bool,
-        Field(
-            True,
-            description="Compute correlation matrix for numeric columns",
-            title="Compute correlation",
-            json_schema_extra={"type": "checkbox"},
-        ),
-    ]
-
-    top_n_categories: Annotated[
-        int,
-        Field(
-            10,
-            description="Number of top values for categorical columns (1–100)",
-            title="Top N categories",
-            ge=1,
-            le=100,
-            json_schema_extra={"type": "integer"},
-        ),
-    ]
-
-    trigger_error: Annotated[
-        bool,
-        Field(
-            False,
-            description="Deliberately trigger a division by zero error (for testing)",
-            title="Trigger error",
-            json_schema_extra={"type": "checkbox"},
-        ),
-    ]
+    A domain config model MUST subclass this so the framework ``Job`` can
+    persist, reload, and track the single uploaded input file generically.
+    Domains add their own fields on top.
+    """
 
     upload_file_name: Optional[str] = Field(
         None,
-        description="Name of the uploaded CSV file",
+        description="Name of the uploaded input file",
         title="Upload file name",
         json_schema_extra={"type": "hidden"},
     )

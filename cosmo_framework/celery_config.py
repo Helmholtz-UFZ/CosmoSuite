@@ -1,4 +1,8 @@
-"""Celery configuration for COSMO_TEMPLATE background tasks."""
+"""Base Celery configuration for Cosmo Framework background tasks.
+
+Domains extend routing/scheduling at runtime (e.g. adding their computation
+queue via ``app.conf.task_routes``); this base only knows the framework tasks.
+"""
 
 from celery.schedules import crontab
 
@@ -15,8 +19,8 @@ def _get_redis_port():
     return port
 
 
-class CeleryConfig:
-    """Celery configuration class."""
+class BaseCeleryConfig:
+    """Base Celery configuration class (framework tasks only)."""
 
     # Build Redis URL with optional password
     _redis_auth = f":{REDIS_PASSWORD}@" if REDIS_PASSWORD else ""
@@ -51,9 +55,8 @@ class CeleryConfig:
     result_expires = 3600  # 1 hour
     result_persistent = True
 
-    # Task routing
+    # Task routing (framework tasks only; domains add their own routes at runtime)
     task_routes = {
-        "cosmo_framework.tasks.computation_tasks.*": {"queue": "computation"},
         "cosmo_framework.tasks.maintenance_tasks.*": {"queue": "maintenance"},
     }
 

@@ -31,8 +31,10 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = "."
-testpaths = ["test"]
+# "." makes cosmo_framework importable; the examples path makes csv_profiler
+# importable so this repo's CI can exercise the framework via the example.
+pythonpath = [".", "examples/csv_profiler"]
+testpaths = ["test", "examples/csv_profiler/test"]
 
 [build-system]
 requires = ["hatchling"]

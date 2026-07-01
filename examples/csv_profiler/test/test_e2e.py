@@ -13,20 +13,21 @@ import pytest
 from playwright.sync_api import expect
 
 from cosmo_framework.config import PORT
-from cosmo_framework.layouts import form_factory
-from test.help_functions_tests import check_all_errors, wait_for_dash_callback
 from cosmo_framework.constants import (
+    DOWNLOAD_BUTTON_SHARED_ID,
+    NAVBAR_COLLAPSE_DIV_SHARED_ID,
+    NAVBAR_TOGGLER_BUTTON_SHARED_ID,
+    RESET_CONFIRM_BUTTON_SHARED_ID,
+    RESET_CONFIRM_MODAL_SHARED_ID,
+)
+
+from csv_profiler.constants import (
     ACCORDION_JOB_SUBMISSION_ID,
     BACK_BUTTON_RESULTS_ID,
     CHANGE_INPUT_BUTTON_JOB_SUBMISSION_ID,
     CHECK_INPUT_BUTTON_INPUT_ID,
     CSV_UPLOAD_INPUT_ID,
-    DOWNLOAD_BUTTON_SHARED_ID,
     JOB_INPUT_HOME_ID,
-    NAVBAR_COLLAPSE_DIV_SHARED_ID,
-    NAVBAR_TOGGLER_BUTTON_SHARED_ID,
-    RESET_CONFIRM_BUTTON_SHARED_ID,
-    RESET_CONFIRM_MODAL_SHARED_ID,
     START_BUTTON_HOME_ID,
     STATUS_DIV_JOB_SUBMISSION_ID,
     SUBMIT_BUTTON_JOB_SUBMISSION_ID,
@@ -34,6 +35,8 @@ from cosmo_framework.constants import (
     UPLOAD_FEEDBACK_DIV_INPUT_ID,
     VIEW_RESULTS_BUTTON_JOB_SUBMISSION_ID,
 )
+from csv_profiler.forms import form_factory
+from help_functions_tests import check_all_errors, wait_for_dash_callback
 
 BASE_URL = f"http://localhost:{PORT}"
 SAMPLE_CSV = os.path.join(os.path.dirname(__file__), "sample_mixed.csv")

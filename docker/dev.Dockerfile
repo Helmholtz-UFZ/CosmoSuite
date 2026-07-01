@@ -35,7 +35,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /python_docker/cosmo_template
 
-ENV PYTHONPATH=/python_docker/cosmo_template/
+ENV PYTHONPATH=/python_docker/cosmo_template/:/python_docker/cosmo_template/examples/csv_profiler/
 ENV PATH="/python_docker/cosmo_template/.venv/bin:$PATH"
 
 # Copy dependency files
@@ -48,7 +48,7 @@ RUN uv sync --frozen
 USER appuser
 
 CMD if [ "$GUNICORN" = 1 ] ; then \
-        exec gunicorn --preload -w 4 -b 0.0.0.0:$FLASK_PORT cosmo_framework.app:server; \
+        exec gunicorn --preload -w 4 -b 0.0.0.0:$FLASK_PORT csv_profiler.app:server; \
     else \
-        exec python3 /python_docker/cosmo_template/cosmo_framework/app.py; \
+        exec python3 /python_docker/cosmo_template/examples/csv_profiler/csv_profiler/app.py; \
     fi

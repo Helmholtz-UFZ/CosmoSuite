@@ -13,12 +13,11 @@ from celery.result import AsyncResult
 from celery.signals import worker_process_init
 from kombu.exceptions import OperationalError
 
-from cosmo_framework.celery_config import CeleryConfig
+from cosmo_framework.celery_config import BaseCeleryConfig
 from cosmo_framework.logger import get_logger_config_worker
 
 log = logging.getLogger(__name__)
 
-NAME_COMPUTATION_TASK = "cosmo_framework.tasks.computation_tasks.start_computation"
 NAME_CLEANUP_TASK = "cosmo_framework.tasks.maintenance_tasks.cleanup"
 NAME_TEST_TASK = "cosmo_framework.tasks.test_tasks.long_running_test"
 
@@ -35,17 +34,27 @@ class BackgroundJobManager:
     def __init__(self):
         """Initialize the background job manager."""
         self.app = Celery("cosmo_template")
-        self.app.config_from_object(CeleryConfig)
+        self.app.config_from_object(BaseCeleryConfig)
         self.app.conf.update(
             broker_connection_retry_on_startup=True,
             broker_connection_retry=True,
         )
 
-    def submit_computation_job(self, job) -> tuple[str | None, bool]:
-        """Submit a computation job to the Celery queue.
+    def submit_named_job(
+        self,
+        task_name: str,
+        args: list | None = None,
+        queue: str = "default",
+    ) -> tuple[str | None, bool]:
+        """Submit a named task to a Celery queue with retry + revoke bookkeeping.
+
+        Generic submission plumbing: domains mount thin wrappers (e.g.
+        ``submit_computation_job``) that call this with their task name/queue.
 
         Args:
-            job: Job instance to process
+            task_name: Dotted Celery task name (must match the registered name)
+            args: Positional args passed to the task
+            queue: Target queue name
 
         Returns:
             tuple: (celery_task_id, failed_boolean)
@@ -53,9 +62,9 @@ class BackgroundJobManager:
         """
         try:
             result = self.app.send_task(
-                NAME_COMPUTATION_TASK,
-                args=[job.job_id],
-                queue="computation",
+                task_name,
+                args=args or [],
+                queue=queue,
                 retry=True,
                 retry_policy={
                     "max_retries": 3,
@@ -67,13 +76,13 @@ class BackgroundJobManager:
             # Store task name in Redis for revoked task retrieval
             self.app.backend.client.set(
                 f"task_name:{result.id}",
-                NAME_COMPUTATION_TASK,
+                task_name,
                 ex=86400,  # 24 hour TTL
             )
-            log.info(f"Submitted computation job {job.job_id} with task_id={result.id}")
+            log.info(f"Submitted task {task_name} with task_id={result.id}")
             return result.id, False
         except (OperationalError, CeleryError) as e:
-            log.error(f"Failed to submit computation job {job.job_id}: {e}")
+            log.error(f"Failed to submit task {task_name}: {e}")
             return None, True
 
     def get_job_status(self, task_id: str) -> dict:

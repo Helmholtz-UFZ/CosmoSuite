@@ -1,9 +1,12 @@
-"""Celery application with task registration.
+"""Celery application with framework task registration.
 
-This module creates the Celery worker entry point by importing the shared
-Celery app and registering all task functions. The worker command points here:
+Creates the shared Celery app and registers the FRAMEWORK tasks (maintenance,
+test). A domain provides its own worker entry point that extends this app with
+its computation task and exposes it as ``celery``:
 
-    celery -A cosmo_framework.celery_app.celery worker ...
+    from cosmo_framework.celery_app import app
+    app.task(bind=True, name=NAME_COMPUTATION_TASK)(start_computation_task)
+    celery = app  # celery -A <domain>.celery_app.celery worker ...
 
 Separated from background_job_manager to break a circular import:
     tasks/*.py → job → background_job_manager → tasks/*.py
@@ -11,19 +14,17 @@ Separated from background_job_manager to break a circular import:
 
 from cosmo_framework.background_job_manager import (
     NAME_CLEANUP_TASK,
-    NAME_COMPUTATION_TASK,
     NAME_TEST_TASK,
     background_job_manager,
 )
-from cosmo_framework.tasks.computation_tasks import start_computation_task
 from cosmo_framework.tasks.maintenance_tasks import cleanup_task
 from cosmo_framework.tasks.test_tasks import long_running_test_task
 
 app = background_job_manager.app
 
-app.task(bind=True, name=NAME_COMPUTATION_TASK)(start_computation_task)
 app.task(bind=True, name=NAME_CLEANUP_TASK)(cleanup_task)
 app.task(bind=True, name=NAME_TEST_TASK)(long_running_test_task)
 
-# Expose for: celery -A cosmo_framework.celery_app.celery worker ...
+# Exposed so a framework-only worker can run the maintenance/test tasks; a domain
+# worker entry imports `app`, registers its own task(s), and re-exposes `celery`.
 celery = app

@@ -27,6 +27,19 @@ linting:
     - "uv run ruff format --check ."
     - "uv run ruff check ."
 
+# Gate: the framework package must stay domain-free (no CSV-profiler references).
+# The CSV profiler lives in examples/csv_profiler/ and depends on the framework.
+domain-free:
+  stage: "lint"
+  image: "python:3.13"
+  script:
+    - |
+      if grep -rnE --include='*.py' 'csv_profiler|ProfileConfig|computation_module|validate_csv|profile_csv|CSV_UPLOAD' cosmo_framework/ ; then
+        echo "ERROR: domain (CSV-profiler) reference found in cosmo_framework/ — the framework package must stay domain-free."
+        exit 1
+      fi
+      echo "OK: cosmo_framework/ is domain-free."
+
 test:
   stage: "test"
   image: "python:3.13"

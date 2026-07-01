@@ -36,7 +36,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /python_docker/cosmo_template
 
-ENV PYTHONPATH=/python_docker/cosmo_template/
+ENV PYTHONPATH=/python_docker/cosmo_template/:/python_docker/cosmo_template/examples/csv_profiler/
 ENV PATH="/python_docker/cosmo_template/.venv/bin:$PATH"
 
 # Copy dependency files
@@ -51,7 +51,7 @@ USER appuser
 # Worker command
 CMD echo "Starting Celery worker..."; \
     python3 /python_docker/cosmo_template/cosmo_framework/object_storage_manager.py setup_remote; \
-    exec celery -A cosmo_framework.celery_app.celery worker \
+    exec celery -A csv_profiler.celery_app.celery worker \
         --loglevel=debug \
         --concurrency=4 \
         --queues=default,computation,maintenance \

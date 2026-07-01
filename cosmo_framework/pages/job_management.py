@@ -32,8 +32,6 @@ from cosmo_framework.tasks.maintenance_tasks import clean_up_jobs
 
 log = logging.getLogger(__name__)
 
-dash.register_page(__name__)
-
 
 table = dag.AgGrid(
     id=JOBS_TABLE_JOB_MANAGEMENT_ID,
@@ -199,3 +197,11 @@ def job_management_dashboard(
     if button_id in [DELETE_BUTTON_JOB_MANAGEMENT_ID, CLEAN_BUTTON_JOB_MANAGEMENT_ID]:
         return rows, [], False
     return rows, dash.no_update, False
+
+
+# Registered with an explicit "pages.*" key + layout so an app can import this
+# framework page across the package boundary (not via local pages_folder discovery).
+dash.register_page(
+    "pages.job_management",
+    layout=layout,
+)

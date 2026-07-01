@@ -2,7 +2,7 @@ en.utf-8.add.spl
 __pycache__
 .python-version
 .env
-cosmo_framework/work_dir/*
+examples/csv_profiler/work_dir/*
 *swp
 *swo
 python_path

@@ -45,10 +45,7 @@ import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, html, no_update, register_page
 from dash.exceptions import PreventUpdate
 
-from cosmo_framework.background_job_manager import (
-    NAME_COMPUTATION_TASK,
-    background_job_manager,
-)
+from cosmo_framework.background_job_manager import background_job_manager
 from cosmo_framework.constants import (
     ACTIVE_TASKS_TABLE_WORKER_MANAGEMENT_ID,
     CANCEL_MODAL_CANCEL_BUTTON_WORKER_MANAGEMENT_ID,
@@ -75,13 +72,7 @@ from cosmo_framework.layouts import create_header, page_container_column_layout
 
 log = logging.getLogger(__name__)
 
-register_page(
-    __name__,
-    path="/worker-management",
-    name="Worker Management",
-    title="Cosmo Template - Worker Management",
-    description="Monitor and control Celery background workers and tasks.",
-)
+# Page registration is at the bottom of this file (explicit "pages.*" key + layout).
 
 
 # ============================================================================
@@ -227,10 +218,9 @@ def format_active_tasks(active_tasks):
     """
     formatted = []
     for task in active_tasks:
-        if task["name"] == NAME_COMPUTATION_TASK:
-            job_id = str(task["args"][0])
-        else:
-            job_id = "N/A"
+        # A task carries its job_id as the first positional arg; framework code
+        # cannot know domain task names, so infer job_id from presence of args.
+        job_id = str(task["args"][0]) if task["args"] else "N/A"
         formatted.append(
             {
                 "task_id": task["id"],
@@ -870,3 +860,15 @@ def submit_test_task(n_clicks):
         log.info(f"Test task submitted successfully with task_id={task_id}")
 
     return None, True
+
+
+# Registered with an explicit "pages.*" key + layout so an app can import this
+# framework page across the package boundary (not via local pages_folder discovery).
+register_page(
+    "pages.worker_management",
+    path="/worker-management",
+    name="Worker Management",
+    title="Cosmo Template - Worker Management",
+    description="Monitor and control Celery background workers and tasks.",
+    layout=layout,
+)

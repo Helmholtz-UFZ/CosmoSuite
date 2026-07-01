@@ -34,7 +34,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 WORKDIR /python_docker/cosmo_template
 
-ENV PYTHONPATH=/python_docker/cosmo_template/
+ENV PYTHONPATH=/python_docker/cosmo_template/:/python_docker/cosmo_template/examples/csv_profiler/
 
 # Copy dependency files
 COPY --chown=appuser:appuser . .
@@ -45,4 +45,4 @@ USER appuser
 RUN uv sync --no-dev --frozen
 
 # Setup rclone config and start gunicorn
-CMD uv run gunicorn -w 4 -b 0.0.0.0:$FLASK_PORT cosmo_framework.app:server
+CMD uv run gunicorn -w 4 -b 0.0.0.0:$FLASK_PORT csv_profiler.app:server

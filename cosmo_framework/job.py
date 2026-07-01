@@ -1,5 +1,7 @@
 #!/usr/bin/python3
-"""Module for a Cosmo Template Job."""
+"""Module for a Cosmo Framework Job."""
+
+from __future__ import annotations
 
 import base64
 import json
@@ -7,14 +9,13 @@ import logging
 import os
 import random
 import shutil
+from collections.abc import Callable
 from datetime import date
 from typing import Literal
 
 import coolname
 from werkzeug.utils import secure_filename
 
-from cosmo_framework.background_job_manager import background_job_manager
-from cosmo_framework.computation_module import validate_csv
 from cosmo_framework.config import JOB_WORK_DIR_TEMPLATE
 from cosmo_framework.constants import (
     DAYS_DELETE_NOT_SUBMITTED,
@@ -33,7 +34,7 @@ from cosmo_framework.object_storage_manager import (
     get_files,
     save_files,
 )
-from cosmo_framework.pydantic_models import ProfileConfig, validate_job_id
+from cosmo_framework.pydantic_models import BaseJobConfig, validate_job_id
 
 log = logging.getLogger(__name__)
 
@@ -59,8 +60,14 @@ class Job:
     and coordinates with background task processing.
     """
 
+    # Injected by the application at startup — see BaseJobConfig and the
+    # config-model contract in docs/plan/cosmo-core-package-boundary.md.
+    config_model: type[BaseJobConfig] | None = None  # REQUIRED; fail-loud if unset
+    file_validator: Callable[[str], None] | None = None  # optional upload validator
+    submit_handler: Callable[[Job], tuple[str | None, bool]] | None = None
+
     job_id: str
-    model: ProfileConfig
+    model: BaseJobConfig
     start_date: date
     submitted: bool
     notified_end: bool
@@ -76,6 +83,12 @@ class Job:
         model=None,
     ):
         """Init class either by id, by model or make a new one."""
+        if self.config_model is None:
+            raise RuntimeError(
+                "Job.config_model is not set — the application must inject a "
+                "BaseJobConfig subclass (via `Job.config_model = <YourConfig>`) "
+                "at startup before constructing a Job."
+            )
         if job_id is not None:
             self.job_id = job_id
             self.load()
@@ -102,7 +115,7 @@ class Job:
         for name, value in DbManager.get_job_columns(self.job_id).items():
             log.debug((f"Load column {name}"))
             if name == "input_data":
-                self.model = ProfileConfig(**json.loads(value))
+                self.model = self.config_model(**json.loads(value))
             setattr(self, str(name), value)
 
         log.debug(f"Job {self.job_id} loaded from database")
@@ -141,7 +154,7 @@ class Job:
             job_id = new_job_id
 
         self.job_id = job_id
-        self.model = ProfileConfig()
+        self.model = self.config_model()
         self.model.job_id = job_id
         self.start_date = date.today()
         self.submitted = False
@@ -200,11 +213,14 @@ class Job:
         with open(file_path, "wb") as f:
             f.write(decoded)
 
-        try:
-            validate_csv(file_path)
-        except Exception:
-            os.remove(file_path)
-            raise
+        if self.file_validator is not None:
+            # broad except: any validator failure must roll back the written
+            # file before re-raising (convention: justified broad except).
+            try:
+                self.file_validator(file_path)
+            except Exception:
+                os.remove(file_path)
+                raise
 
         self.model.upload_file_name = safe_name
         self.save()
@@ -252,7 +268,7 @@ class Job:
         data_to_insert = {name: self._get_column_data(name) for name in column_names}
         for key, value in data_to_insert.items():
             if key == "input_data":
-                ProfileConfig(**json.loads(value))
+                self.config_model(**json.loads(value))
         DbManager.add_entry(data_to_insert)
 
     def save(self):
@@ -285,7 +301,13 @@ class Job:
         # to see unexpected files and fail.
         save_files(self.job_id)
 
-        _celery_task_id, failed = background_job_manager.submit_computation_job(self)
+        if self.submit_handler is None:
+            raise RuntimeError(
+                "Job.submit_handler is not set — the application must inject a "
+                "submit handler (via `Job.submit_handler = <your_submit_fn>`) "
+                "at startup before submitting a Job."
+            )
+        _celery_task_id, failed = self.submit_handler(self)
         if failed:
             log.error(f"Job {self.job_id} failed to start.")
             self.status = "FAILED"

@@ -5,7 +5,6 @@ import dash_bootstrap_components as dbc
 import logging
 
 from dash import Input, Output, State, callback, callback_context, dcc, html
-from dash_form_factory import FormFactory, InputField
 
 from cosmo_framework.constants import (
     LOADING_OVERLAY_MODAL_SHARED_ID,
@@ -20,7 +19,6 @@ from cosmo_framework.constants import (
 )
 from cosmo_framework.error_handling import error_modal
 from cosmo_framework.job import Job
-from cosmo_framework.pydantic_models import ProfileConfig
 
 reset_confirm_modal = dbc.Modal(
     [
@@ -84,7 +82,8 @@ def create_navbar():
             dbc.Container(
                 children=[
                     dbc.NavbarBrand(
-                        href=dash.page_registry["pages.home"]["relative_path"],
+                        # Index route — the active domain registers the page at "/".
+                        href=dash.get_relative_path("/"),
                         children=[
                             html.Img(
                                 src="/static/icon_navbar.svg",
@@ -186,41 +185,6 @@ def job_not_found_layout(job_id):
     header = create_header("Job not found", job_id, bg_color="bg-danger")
     body = html.Div(f"Job not found: {job_id}", className="text-center m-3")
     return header, body
-
-
-form_layout_template = dbc.Card(
-    [
-        dbc.CardHeader("Profiling Options", className="text-center fs-5"),
-        dbc.CardBody(
-            [
-                dbc.Row(
-                    [
-                        dbc.Col(InputField("handle_missing"), md=6),
-                        dbc.Col(InputField("histogram_bins"), md=6),
-                    ],
-                    className="mb-3",
-                ),
-                dbc.Row(
-                    [
-                        dbc.Col(InputField("top_n_categories"), md=6),
-                        dbc.Col(InputField("compute_correlation"), md=6),
-                    ],
-                    className="mb-3",
-                ),
-                dbc.Row(
-                    [
-                        dbc.Col(InputField("trigger_error"), md=6),
-                    ],
-                    className="mb-3",
-                ),
-            ],
-        ),
-    ],
-    className="my-3",
-)
-
-form_factory = FormFactory(ProfileConfig, form_layout_template)
-form_layout = form_factory.process_layout(form_factory.layout)
 
 
 def landing_page_layout_column(
