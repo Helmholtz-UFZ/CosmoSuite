@@ -1,9 +1,9 @@
 services:
-  cosmo-template:
-    image: cosmo-template-webserver
-    container_name: cosmo-template-webserver
+  cosmo-suite:
+    image: cosmo-suite-webserver
+    container_name: cosmo-suite-webserver
     build:
-      # Repo root: the example depends on cosmo-framework by local path, so the
+      # Repo root: the example depends on cosmo-suite by local path, so the
       # framework source must be in the build context.
       context: ../..
       dockerfile: examples/csv_profiler/docker/dev.Dockerfile
@@ -24,12 +24,12 @@ services:
     volumes:
       # Mount the whole repo (framework + example live) for reload; the anonymous
       # volume preserves the image-built venv over the bind mount.
-      - "../..:/python_docker/cosmo_template"
-      - "/python_docker/cosmo_template/examples/csv_profiler/.venv"
+      - "../..:/python_docker/cosmo_suite"
+      - "/python_docker/cosmo_suite/examples/csv_profiler/.venv"
 
-  cosmo-template-worker:
-    image: cosmo-template-worker
-    container_name: cosmo-template-worker
+  cosmo-suite-worker:
+    image: cosmo-suite-worker
+    container_name: cosmo-suite-worker
     build:
       context: ../..
       dockerfile: examples/csv_profiler/docker/worker.Dockerfile
@@ -48,12 +48,12 @@ services:
     volumes:
       # Mount the whole repo (framework + example live) for reload; the anonymous
       # volume preserves the image-built venv over the bind mount.
-      - "../..:/python_docker/cosmo_template"
-      - "/python_docker/cosmo_template/examples/csv_profiler/.venv"
+      - "../..:/python_docker/cosmo_suite"
+      - "/python_docker/cosmo_suite/examples/csv_profiler/.venv"
 
   redis:
     image: redis:7-alpine
-    container_name: redis_cosmo_template
+    container_name: redis_cosmo_suite
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes
@@ -68,7 +68,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    container_name: postgres_cosmo_template
+    container_name: postgres_cosmo_suite
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 2s
@@ -79,7 +79,7 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: minio_cosmo_template
+    container_name: minio_cosmo_suite
     ports:
       - "9000:9000"
       - "9001:9001" # Web-based admin console

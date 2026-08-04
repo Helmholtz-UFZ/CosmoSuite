@@ -7,8 +7,8 @@ process, and exposes ``celery`` for:
     celery -A csv_profiler.celery_app.celery worker ...
 """
 
-from cosmo_framework.celery_app import app
-from cosmo_framework.job import Job
+from cosmo_suite.celery_app import app
+from cosmo_suite.job import Job
 
 from csv_profiler.background_job_manager import (
     NAME_COMPUTATION_TASK,

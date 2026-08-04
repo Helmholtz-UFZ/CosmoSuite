@@ -13,13 +13,13 @@ from celery.result import AsyncResult
 from celery.signals import worker_process_init
 from kombu.exceptions import OperationalError
 
-from cosmo_framework.celery_config import BaseCeleryConfig
-from cosmo_framework.logger import get_logger_config_worker
+from cosmo_suite.celery_config import BaseCeleryConfig
+from cosmo_suite.logger import get_logger_config_worker
 
 log = logging.getLogger(__name__)
 
-NAME_CLEANUP_TASK = "cosmo_framework.tasks.maintenance_tasks.cleanup"
-NAME_TEST_TASK = "cosmo_framework.tasks.test_tasks.long_running_test"
+NAME_CLEANUP_TASK = "cosmo_suite.tasks.maintenance_tasks.cleanup"
+NAME_TEST_TASK = "cosmo_suite.tasks.test_tasks.long_running_test"
 
 
 @worker_process_init.connect
@@ -33,7 +33,7 @@ class BackgroundJobManager:
 
     def __init__(self):
         """Initialize the background job manager."""
-        self.app = Celery("cosmo_template")
+        self.app = Celery("cosmo_suite")
         self.app.config_from_object(BaseCeleryConfig)
         self.app.conf.update(
             broker_connection_retry_on_startup=True,

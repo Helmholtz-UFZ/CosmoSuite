@@ -4,7 +4,7 @@ Thin wrapper over the framework's generic ``submit_named_job``; mounted on the
 framework Job via ``Job.submit_handler`` at startup.
 """
 
-from cosmo_framework.background_job_manager import background_job_manager
+from cosmo_suite.background_job_manager import background_job_manager
 
 NAME_COMPUTATION_TASK = "csv_profiler.tasks.computation_tasks.start_computation"
 

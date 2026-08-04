@@ -1,9 +1,9 @@
 ## Project Overview
 
-Cosmo Template is a reference/template application for the Dash + Celery + PostgreSQL +
-MinIO framework used by COSMOPOLITAN and COSMONAUT. It demonstrates how to integrate a
-Python computation module into the framework using a CSV statistical profiler as the
-example.
+Cosmo Suite is the shared Dash + Celery + PostgreSQL + MinIO application framework used
+by COSMOPOLITAN and COSMONAUT. This repo is the framework's home; it also ships a
+reference domain, `examples/csv_profiler/` — a CSV statistical profiler — that
+demonstrates how to integrate a Python computation module into the framework.
 
 ## Architecture
 
@@ -39,12 +39,12 @@ The application is built as a Dash web application with the following key compon
 
 ## Sister Projects
 
-This template is derived from two sister projects that share the same architecture:
+This framework is derived from two sister projects that share the same architecture:
 
 - **COSMOPOLITAN** (`../cosmopolitan`) — CRNS soil moisture prediction, uses PostGIS
 - **COSMONAUT** (`../ufz-cosmonaut`) — Navigation route optimization, uses Dash Leaflet
 
-Patterns and conventions in this template apply symmetrically to both.
+Patterns and conventions in this framework apply symmetrically to both.
 
 ## Convention Philosophy
 

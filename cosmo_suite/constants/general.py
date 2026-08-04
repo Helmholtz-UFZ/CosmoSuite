@@ -1,4 +1,4 @@
-"""General application constants for COSMO_TEMPLATE."""
+"""General application constants for Cosmo Suite."""
 
 # Number of days to keep a submitted job entries in the database
 DAYS_DELETE_SUBMITTED = 60

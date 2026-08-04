@@ -24,7 +24,7 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import Input, Output, State, callback, ctx, dcc, html, no_update
 
-from cosmo_framework.constants import (
+from cosmo_suite.constants import (
     AUTO_POLL_INTERVAL_LOGS_ID,
     DATE_RANGE_DATEPICKER_LOGS_ID,
     END_HOUR_INPUT_LOGS_ID,
@@ -41,9 +41,9 @@ from cosmo_framework.constants import (
     TIME_ERROR_DIV_LOGS_ID,
     TIME_INPUT_GROUP_LOGS_ID,
 )
-from cosmo_framework.layouts import create_header, page_container_column_layout
-from cosmo_framework.logs_table import format_logs_list
-from cosmo_framework.db_manager import DbManager
+from cosmo_suite.layouts import create_header, page_container_column_layout
+from cosmo_suite.logs_table import format_logs_list
+from cosmo_suite.db_manager import DbManager
 
 DEFAULT_EXCLUDED_MODULES = ["beat", "logs", "layout", "db_manager"]
 

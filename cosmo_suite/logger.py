@@ -7,7 +7,7 @@ import time
 import psycopg2
 from psycopg2 import pool
 
-from cosmo_framework.config import (
+from cosmo_suite.config import (
     POSTGRES_DB,
     POSTGRES_HOST_NAME,
     POSTGRES_PASSWORD,

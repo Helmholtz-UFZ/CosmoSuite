@@ -1,6 +1,6 @@
 """CSV profiler configuration model (the domain config for the framework Job).
 
-`ProfileConfig` subclasses `cosmo_framework.pydantic_models.BaseJobConfig`, which
+`ProfileConfig` subclasses `cosmo_suite.pydantic_models.BaseJobConfig`, which
 provides the framework-required `job_id` and `upload_file_name` fields. The app
 injects this class via `Job.config_model` at startup.
 """
@@ -9,7 +9,7 @@ from typing import Annotated, Literal, Optional
 
 from pydantic import Field
 
-from cosmo_framework.pydantic_models import BaseJobConfig
+from cosmo_suite.pydantic_models import BaseJobConfig
 
 
 class ProfileConfig(BaseJobConfig):

@@ -1,6 +1,6 @@
 # Skill: Run and Fix Failing Tests
 
-Step-by-step checklist for running tests, diagnosing failures, and fixing issues in the COSMO_TEMPLATE test suite.
+Step-by-step checklist for running tests, diagnosing failures, and fixing issues in the Cosmo Suite test suite.
 
 ---
 
@@ -81,9 +81,9 @@ open test/artifacts/<test-dir>/page.html
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `PostgreSQL not available` | DB container failed health check | `docker logs postgres_cosmo-template` |
-| `MinIO not available` | Object storage failed health check | `docker logs minio_cosmo-template` |
-| `Redis not available` | Redis failed health check | `docker logs redis_cosmo-template` |
+| `PostgreSQL not available` | DB container failed health check | `docker logs postgres_cosmo_suite` |
+| `MinIO not available` | Object storage failed health check | `docker logs minio_cosmo_suite` |
+| `Redis not available` | Redis failed health check | `docker logs redis_cosmo_suite` |
 | Port already in use | Leftover Docker containers or another process on 5433/9010/6380 | 1. `docker compose down` in the current project first. 2. If persists, tell the user which port is blocked — a sibling project (cosmopolitan, etc.) may be running in parallel and only the user knows which is safe to stop. |
 | Docker not running | Docker daemon not started | `sudo systemctl start docker` |
 
@@ -148,25 +148,25 @@ If tests require services and startup errors occur, verify each service manually
 **PostgreSQL:**
 
 ```bash
-docker ps | grep postgres_cosmo-template
-docker logs postgres_cosmo-template
-docker exec postgres_cosmo-template pg_isready -U cosmo-template
+docker ps | grep postgres_cosmo_suite
+docker logs postgres_cosmo_suite
+docker exec postgres_cosmo_suite pg_isready -U cosmo_suite_user
 ```
 
 **MinIO:**
 
 ```bash
-docker ps | grep minio_cosmo-template
-docker logs minio_cosmo-template
+docker ps | grep minio_cosmo_suite
+docker logs minio_cosmo_suite
 curl -sf http://localhost:9010/minio/health/ready
 ```
 
 **Redis:**
 
 ```bash
-docker ps | grep redis_cosmo-template
-docker logs redis_cosmo-template
-docker exec redis_cosmo-template redis-cli ping
+docker ps | grep redis_cosmo_suite
+docker logs redis_cosmo_suite
+docker exec redis_cosmo_suite redis-cli ping
 ```
 
 **Clean up and restart:**
@@ -184,7 +184,7 @@ docker compose down
 If lingering containers cause port conflicts:
 
 ```bash
-docker ps -a | grep cosmo-template
+docker ps -a | grep cosmo-suite
 docker compose down --remove-orphans
 ```
 

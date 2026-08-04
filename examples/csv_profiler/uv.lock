@@ -229,7 +229,7 @@ wheels = [
 ]
 
 [[package]]
-name = "cosmo-framework"
+name = "cosmo-suite"
 version = "0.1.0"
 source = { editable = "../../" }
 dependencies = [
@@ -271,7 +271,7 @@ name = "csv-profiler"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "cosmo-framework" },
+    { name = "cosmo-suite" },
     { name = "dash-form-factory" },
     { name = "numpy" },
     { name = "pandas" },
@@ -288,7 +288,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cosmo-framework", editable = "../../" },
+    { name = "cosmo-suite", editable = "../../" },
     { name = "dash-form-factory", specifier = "==0.1.9" },
     { name = "numpy", specifier = ">=1.26.0,<3" },
     { name = "pandas", specifier = ">=2.0.0,<3" },

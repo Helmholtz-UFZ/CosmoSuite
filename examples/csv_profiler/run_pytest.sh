@@ -12,8 +12,8 @@ cleaning_up() {
     fi
 
     # Stop and remove containers
-    docker stop postgres_cosmo_template minio_cosmo_template redis_cosmo_template >/dev/null 2>&1 || true
-    docker rm postgres_cosmo_template minio_cosmo_template redis_cosmo_template >/dev/null 2>&1 || true
+    docker stop postgres_cosmo_suite minio_cosmo_suite redis_cosmo_suite >/dev/null 2>&1 || true
+    docker rm postgres_cosmo_suite minio_cosmo_suite redis_cosmo_suite >/dev/null 2>&1 || true
     docker compose down >/dev/null 2>&1 || true
 }
 
@@ -129,9 +129,9 @@ if [ "$START_SERVICES" -eq 1 ]; then
     docker compose up postgres minio redis -d --quiet-pull
 
     # Wait for services with retry logic
-    check_service "docker exec postgres_cosmo_template pg_isready -q 2>/dev/null" "PostgreSQL"
-    check_service "docker exec minio_cosmo_template curl -sf http://localhost:9000/minio/health/ready >/dev/null 2>&1" "MinIO"
-    check_service "docker exec redis_cosmo_template redis-cli ping 2>/dev/null | grep -q PONG" "Redis"
+    check_service "docker exec postgres_cosmo_suite pg_isready -q 2>/dev/null" "PostgreSQL"
+    check_service "docker exec minio_cosmo_suite curl -sf http://localhost:9000/minio/health/ready >/dev/null 2>&1" "MinIO"
+    check_service "docker exec redis_cosmo_suite redis-cli ping 2>/dev/null | grep -q PONG" "Redis"
 else
     echo "Skipping service management (assuming services already running)"
 fi

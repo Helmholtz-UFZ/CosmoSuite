@@ -9,8 +9,8 @@ stages:
 
 variables:
   # Used by GitLab to initialise the postgres service container (example-test)
-  POSTGRES_DB: cosmo_template
-  POSTGRES_USER: cosmo_template_user
+  POSTGRES_DB: cosmo_suite
+  POSTGRES_USER: cosmo_suite_user
   POSTGRES_PASSWORD: test
   POSTGRES_HOST_AUTH_METHOD: trust
   # Used by the minio service variables block below
@@ -18,7 +18,7 @@ variables:
   OBJECT_STORAGE_SECRET_KEY: "secretkey"
 
 # =========================================================================
-# Framework (root package: cosmo_framework/)
+# Framework (root package: cosmo_suite/)
 # =========================================================================
 
 framework-lint:
@@ -28,8 +28,8 @@ framework-lint:
     - "pip install uv"
     - "uv sync"
   script:
-    - "uv run ruff format --check cosmo_framework test"
-    - "uv run ruff check cosmo_framework test"
+    - "uv run ruff format --check cosmo_suite test"
+    - "uv run ruff check cosmo_suite test"
 
 # Gate: the framework package must stay domain-free (no CSV-profiler references).
 # The CSV profiler lives in examples/csv_profiler/ and depends on the framework.
@@ -38,11 +38,11 @@ domain-free:
   image: "python:3.13"
   script:
     - |
-      if grep -rnE --include='*.py' 'csv_profiler|ProfileConfig|computation_module|validate_csv|profile_csv|CSV_UPLOAD' cosmo_framework/ ; then
-        echo "ERROR: domain (CSV-profiler) reference found in cosmo_framework/ — the framework package must stay domain-free."
+      if grep -rnE --include='*.py' 'csv_profiler|ProfileConfig|computation_module|validate_csv|profile_csv|CSV_UPLOAD' cosmo_suite/ ; then
+        echo "ERROR: domain (CSV-profiler) reference found in cosmo_suite/ — the framework package must stay domain-free."
         exit 1
       fi
-      echo "OK: cosmo_framework/ is domain-free."
+      echo "OK: cosmo_suite/ is domain-free."
 
 # Framework-scope tests (static id enforcement, etc.) — no services needed.
 framework-test:

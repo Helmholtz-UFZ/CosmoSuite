@@ -1,4 +1,4 @@
-"""Dash app for the CSV profiler example — composes the Cosmo Framework shell.
+"""Dash app for the CSV profiler example — composes the Cosmo Suite shell.
 
 Wires the framework Job seams (config model, file validator, submit handler) to
 the CSV profiler domain, then builds the multi-page Dash app: the domain workflow
@@ -14,14 +14,14 @@ from threading import Thread
 import dash_bootstrap_components as dbc
 from dash import Dash
 
-from cosmo_framework.background_job_manager import background_job_manager
-from cosmo_framework.config import DEBUG, PORT
-from cosmo_framework.error_handling import handle_error
-from cosmo_framework.files_route import serve_files
-from cosmo_framework.job import Job
-from cosmo_framework.layouts import app_layout
-from cosmo_framework.logger import get_logger_config_web
-from cosmo_framework.object_storage_manager import create_bucket, setup_remote
+from cosmo_suite.background_job_manager import background_job_manager
+from cosmo_suite.config import DEBUG, PORT
+from cosmo_suite.error_handling import handle_error
+from cosmo_suite.files_route import serve_files
+from cosmo_suite.job import Job
+from cosmo_suite.layouts import app_layout
+from cosmo_suite.logger import get_logger_config_web
+from cosmo_suite.object_storage_manager import create_bucket, setup_remote
 
 from csv_profiler.background_job_manager import submit_computation_job
 from csv_profiler.computation_module import validate_csv
@@ -52,9 +52,9 @@ server = app.server
 # Register the framework's infra/ops pages (they live in the installed package,
 # not under this app's pages_folder). register_page requires the app to exist
 # first, so these imports run after Dash().
-import cosmo_framework.pages.logs  # noqa: E402, F401
-import cosmo_framework.pages.job_management  # noqa: E402, F401
-import cosmo_framework.pages.worker_management  # noqa: E402, F401
+import cosmo_suite.pages.logs  # noqa: E402, F401
+import cosmo_suite.pages.job_management  # noqa: E402, F401
+import cosmo_suite.pages.worker_management  # noqa: E402, F401
 
 # Set up object storage and start the Celery Beat scheduler.
 setup_remote()

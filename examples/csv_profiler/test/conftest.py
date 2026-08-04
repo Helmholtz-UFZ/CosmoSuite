@@ -20,7 +20,7 @@ from playwright.sync_api import Page
 from slugify import slugify
 from sqlalchemy.exc import OperationalError
 
-from cosmo_framework.config import (
+from cosmo_suite.config import (
     OBJECT_STORAGE_SECRET_KEY,
     PORT,
     POSTGRES_PASSWORD,
@@ -29,7 +29,7 @@ from cosmo_framework.config import (
     REDIS_PASSWORD,
     REDIS_PORT,
 )
-from cosmo_framework.db_manager import DbManager
+from cosmo_suite.db_manager import DbManager
 
 
 def create_logger():
@@ -84,7 +84,7 @@ def pytest_configure(config):
         pytest.exit("rclone command not available")
 
     try:
-        from cosmo_framework.object_storage_manager import (
+        from cosmo_suite.object_storage_manager import (
             ObjectStorageError,
             create_bucket,
             setup_remote,

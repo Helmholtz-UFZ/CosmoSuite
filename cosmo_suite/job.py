@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Module for a Cosmo Framework Job."""
+"""Module for a Cosmo Suite Job."""
 
 from __future__ import annotations
 
@@ -16,25 +16,25 @@ from typing import Literal
 import coolname
 from werkzeug.utils import secure_filename
 
-from cosmo_framework.config import JOB_WORK_DIR_TEMPLATE
-from cosmo_framework.constants import (
+from cosmo_suite.config import JOB_WORK_DIR_TEMPLATE
+from cosmo_suite.constants import (
     DAYS_DELETE_NOT_SUBMITTED,
     DAYS_DELETE_SUBMITTED,
     LOG_FILE_NAME,
 )
-from cosmo_framework.db_manager import DbManager, JobTable
-from cosmo_framework.error_handling import (
+from cosmo_suite.db_manager import DbManager, JobTable
+from cosmo_suite.error_handling import (
     InvalidJobID,
     JobExists,
     JobNotFound,
 )
-from cosmo_framework.object_storage_manager import (
+from cosmo_suite.object_storage_manager import (
     delete_directory_from_storage,
     delete_file_from_storage,
     get_files,
     save_files,
 )
-from cosmo_framework.pydantic_models import BaseJobConfig, validate_job_id
+from cosmo_suite.pydantic_models import BaseJobConfig, validate_job_id
 
 log = logging.getLogger(__name__)
 

@@ -1,12 +1,12 @@
 [project]
 name = "csv-profiler"
 version = "0.1.0"
-description = "CSV statistical profiler — reference domain / example app for the Cosmo Framework"
+description = "CSV statistical profiler — reference domain / example app for the Cosmo Suite"
 readme = "README.md"
 license = { text = "EUPL-1.2" }
 requires-python = ">=3.13"
 dependencies = [
-    "cosmo-framework",
+    "cosmo-suite",
     "dash-form-factory==0.1.9",
     "pandas>=2.0.0,<3",
     "numpy>=1.26.0,<3",
@@ -15,10 +15,10 @@ dependencies = [
 # In this monorepo the framework is resolved from the local path (editable) so the
 # example runs against the working tree. A real downstream app would instead pin a
 # git tag, e.g.:
-#   [project.dependencies] "cosmo-framework @ git+https://codebase.helmholtz.cloud/.../cosmo-framework@v0.1.0"
+#   [project.dependencies] "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.1.0"
 # See the README (--local-core dev loop + tagged-release note).
 [tool.uv.sources]
-cosmo-framework = { path = "../..", editable = true }
+cosmo-suite = { path = "../..", editable = true }
 
 [dependency-groups]
 dev = [

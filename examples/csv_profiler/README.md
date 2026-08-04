@@ -1,6 +1,6 @@
 # CSV Profiler — reference domain / example app
 
-A minimal reference application built on the [**Cosmo Framework**](../../README.md):
+A minimal reference application built on the [**Cosmo Suite**](../../README.md):
 upload a CSV, run a background statistical-profiling job, and view the results.
 It is the canonical example of how to plug a domain into the framework, and the
 recommended starting point for a new Cosmo Suite app ("copy this directory").
@@ -30,7 +30,7 @@ working tree. A standalone downstream app would instead pin a git tag:
 
 ```toml
 dependencies = [
-    "cosmo-framework @ git+https://codebase.helmholtz.cloud/.../cosmo-framework@v0.1.0",
+    "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.1.0",
 ]
 ```
 
@@ -44,7 +44,7 @@ would silently ship the old framework.
 Run everything from `examples/csv_profiler/`.
 
 ```bash
-uv sync         # install the example + cosmo-framework (editable, local path) into a venv
+uv sync         # install the example + cosmo-suite (editable, local path) into a venv
 ./dev_up.sh     # build & start app + worker + postgres/minio/redis via docker compose
 ```
 
@@ -70,5 +70,5 @@ uv run playwright install chromium
 
 To iterate on the framework and this app together, mount the framework source into
 the running containers instead of using the installed copy (see
-`docker-compose.local_pkg.yml`): mount `../../cosmo_framework` and prepend it to
-`PYTHONPATH`. The mount target is the directory *containing* `cosmo_framework`.
+`docker-compose.local_pkg.yml`): mount `../../cosmo_suite` and prepend it to
+`PYTHONPATH`. The mount target is the directory *containing* `cosmo_suite`.

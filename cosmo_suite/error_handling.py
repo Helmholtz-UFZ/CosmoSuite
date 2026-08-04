@@ -11,13 +11,13 @@ from dash import set_props
 from sqlalchemy.exc import DatabaseError, OperationalError
 from werkzeug.exceptions import NotFound
 
-from cosmo_framework.constants import (
+from cosmo_suite.constants import (
     ERROR_MESSAGE_DIV_SHARED_ID,
     ERROR_MODAL_SHARED_ID,
     ERROR_TITLE_DIV_SHARED_ID,
     LOADING_OVERLAY_MODAL_SHARED_ID,
 )
-from cosmo_framework.object_storage_manager import ObjectStorageError
+from cosmo_suite.object_storage_manager import ObjectStorageError
 
 log = logging.getLogger(__name__)
 

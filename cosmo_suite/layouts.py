@@ -6,7 +6,7 @@ import logging
 
 from dash import Input, Output, State, callback, callback_context, dcc, html
 
-from cosmo_framework.constants import (
+from cosmo_suite.constants import (
     LOADING_OVERLAY_MODAL_SHARED_ID,
     NAVBAR_COLLAPSE_DIV_SHARED_ID,
     NAVBAR_TOGGLER_BUTTON_SHARED_ID,
@@ -17,8 +17,8 @@ from cosmo_framework.constants import (
     RESET_JOB_STORE_SHARED_ID,
     URL_LOCATION_SHARED_ID,
 )
-from cosmo_framework.error_handling import error_modal
-from cosmo_framework.job import Job
+from cosmo_suite.error_handling import error_modal
+from cosmo_suite.job import Job
 
 reset_confirm_modal = dbc.Modal(
     [
@@ -90,9 +90,9 @@ def create_navbar():
                                 width="30",
                                 height="30",
                                 className="d-inline-block align-text-top",
-                                alt="Cosmo Template Icon",
+                                alt="Cosmo Suite Icon",
                             ),
-                            " Cosmo Template",
+                            " Cosmo Suite",
                         ],
                     ),
                     dbc.NavbarToggler(id=NAVBAR_TOGGLER_BUTTON_SHARED_ID),
