@@ -113,6 +113,30 @@ version — for Suite and the apps").
 
 ---
 
+## 4b. Aufgabe 5 (Nachtrag bei der Ausführung) — `Job.app_version`-Seam
+
+Bei Aufgabe 4 aufgefallen: `cosmo_suite/job.py` hatte `APP_VERSION = "0.1.0"`
+hartkodiert und stempelte das in die `version`-Spalte **jedes** Jobs. Das ist
+semantisch die Version der *App*, nicht des Frameworks — beide Apps hätten alle ihre
+Jobs mit `0.1.0` beschriftet, unabhängig von ihrem eigenen Stand. Derselbe
+Zahlen-Mismatch wie in Aufgabe 4, nur eine Ebene tiefer, und ebenfalls relevant für
+C1 der Metadaten-Tabelle.
+
+Bewusst **vor** dem Tag erledigt: danach kostet es beide Apps ein Re-Pin.
+
+- `FRAMEWORK_VERSION` kommt jetzt aus der Distribution-Metadata
+  (`importlib.metadata.version("cosmo-suite")`), kann also nicht mehr von
+  `pyproject.toml` abdriften. Fallback `"unknown"` bei `PackageNotFoundError`
+  (PYTHONPATH-Nutzung ohne Installation) — bewusst keine plausible Zahl.
+- Vierter Seam: `Job.app_version`, Default `FRAMEWORK_VERSION`. Optional, kein
+  Fail-loud. Dokumentiert in `docs/conventions/config_model_contract.md`.
+- **Für beide App-Agenten:** `Job.app_version = version("<app-paket>")` setzen, und
+  zwar in `app.py` **und** `celery_app.py` — ein ungesetzter Seam im Worker stempelt
+  still die Framework-Version. Referenz: `examples/csv_profiler/csv_profiler/app.py`
+  und `celery_app.py`.
+
+---
+
 ## 5. Ausdrücklich NICHT in diesem Batch
 
 **Der `on_unhandled`-Hook für `handle_error`.** Beide Apps mailen bei unbehandelten

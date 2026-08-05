@@ -11,6 +11,7 @@ import random
 import shutil
 from collections.abc import Callable
 from datetime import date
+from importlib.metadata import PackageNotFoundError, version
 from typing import Literal
 
 import coolname
@@ -38,7 +39,16 @@ from cosmo_suite.pydantic_models import BaseJobConfig, validate_job_id
 
 log = logging.getLogger(__name__)
 
-APP_VERSION = "0.1.0"
+try:
+    FRAMEWORK_VERSION = version("cosmo-suite")
+except PackageNotFoundError:
+    # Convention deviation (CLAUDE.md: no defensive programming). This value is
+    # provenance metadata, never control flow, and a consumer may put the
+    # framework on PYTHONPATH without installing the distribution. A missing
+    # version must not keep a job from being recorded — and it must not be a
+    # plausible-looking number either, hence the explicit "unknown".
+    FRAMEWORK_VERSION = "unknown"
+
 SEED = os.urandom(128)
 
 
@@ -65,6 +75,11 @@ class Job:
     config_model: type[BaseJobConfig] | None = None  # REQUIRED; fail-loud if unset
     file_validator: Callable[[str], None] | None = None  # optional upload validator
     submit_handler: Callable[[Job], tuple[str | None, bool]] | None = None
+    # Stamped into the job's `version` column as provenance. Defaults to the
+    # framework's version; an app with its own release cycle should inject its
+    # own (`Job.app_version = version("my-app")`), because that is the version
+    # that produced the result.
+    app_version: str = FRAMEWORK_VERSION
 
     job_id: str
     model: BaseJobConfig
@@ -136,7 +151,7 @@ class Job:
         self.notified_end = False
         self.logs = ""
         self.status = "PENDING"
-        self.version = APP_VERSION
+        self.version = self.app_version
         self.working_dir = JOB_WORK_DIR_TEMPLATE.format(job_id=self.job_id)
         os.makedirs(self.working_dir, exist_ok=True)
         self.dump_parameters()
@@ -161,7 +176,7 @@ class Job:
         self.notified_end = False
         self.logs = ""
         self.status = "PENDING"
-        self.version = APP_VERSION
+        self.version = self.app_version
         self.working_dir = JOB_WORK_DIR_TEMPLATE.format(job_id=self.job_id)
         shutil.rmtree(self.working_dir, ignore_errors=True)
         os.makedirs(self.working_dir, exist_ok=True)

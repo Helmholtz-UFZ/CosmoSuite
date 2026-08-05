@@ -23,6 +23,31 @@ these first — they usually explain the failure without needing another run. No
 that `run_pytest.sh` clears previous artifacts by default (use `--keep-artifacts`
 to preserve them across runs).
 
+## Troubleshooting: `ModuleNotFoundError` for a package that is installed
+
+If `run_pytest.sh` dies during collection with something like
+`ImportError while loading conftest ... No module named 'redis'`, while
+`uv run python -c "import redis"` in the same directory works, the venv's
+console scripts are stale.
+
+`.venv/bin/pytest` (like every console script) hardcodes an **absolute**
+interpreter path in its shebang. Moving or renaming the repository directory
+leaves that path pointing into the old location — `uv run pytest` then execs a
+*different* interpreter with a *different* `site-packages`. `uv run python`
+is unaffected, because uv resolves that interpreter itself, and native binaries
+like `ruff` are unaffected too, so lint keeps passing while tests cannot even
+collect.
+
+Check and repair:
+
+```bash
+head -1 .venv/bin/pytest     # must point into the current repo path
+rm -rf .venv && uv sync      # rewrites the shebangs
+```
+
+Both venvs need this after a move: the framework root and
+`examples/csv_profiler/`.
+
 ## Code Rules
 
 - All tests go in `test/` (flat directory, no subdirectories)

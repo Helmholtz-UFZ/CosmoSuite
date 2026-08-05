@@ -1,14 +1,15 @@
 """Dash app for the CSV profiler example — composes the Cosmo Suite shell.
 
-Wires the framework Job seams (config model, file validator, submit handler) to
-the CSV profiler domain, then builds the multi-page Dash app: the domain workflow
-pages (home/input/results/job_submission) are auto-discovered from this package's
-``pages/`` folder, while the framework's infra/ops pages (logs, job management,
-worker management) are imported explicitly so they register too.
+Wires the framework Job seams (config model, file validator, submit handler, app
+version) to the CSV profiler domain, then builds the multi-page Dash app: the
+domain workflow pages (home/input/results/job_submission) are auto-discovered from
+this package's ``pages/`` folder, while the framework's infra/ops pages (logs, job
+management, worker management) are imported explicitly so they register too.
 """
 
 import logging
 import logging.config
+from importlib.metadata import version
 from threading import Thread
 
 import dash_bootstrap_components as dbc
@@ -32,6 +33,7 @@ from csv_profiler.pydantic_models import ProfileConfig
 Job.config_model = ProfileConfig
 Job.file_validator = staticmethod(validate_csv)
 Job.submit_handler = staticmethod(submit_computation_job)
+Job.app_version = version("csv-profiler")
 
 # Configure logging BEFORE Dash() and any getLogger() calls.
 logging.config.dictConfig(get_logger_config_web(DEBUG))
