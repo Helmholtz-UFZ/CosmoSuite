@@ -1,6 +1,6 @@
 [project]
 name = "cosmo-suite"
-version = "0.1.0"
+version = "0.3.0"
 description = "Shared Dash + Celery + PostgreSQL + MinIO application framework for the Cosmo Suite"
 authors = [{ name = "John Anders", email = "john-eric.anders@ufz.de" }]
 readme = "README.md"
@@ -16,6 +16,7 @@ dependencies = [
     "coolname>=2.2.0,<3",
     "gunicorn>=23.0.0,<24",
     "pydantic>=2.0.0,<3",
+    "minio>=7.2.0,<8",
 ]
 
 [dependency-groups]

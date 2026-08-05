@@ -5,6 +5,10 @@ import os
 import subprocess
 import sys
 import time
+from datetime import timedelta
+
+from minio import Minio
+from minio.error import S3Error
 
 from cosmo_suite.config import (
     JOB_WORK_DIR_TEMPLATE,
@@ -18,6 +22,13 @@ from cosmo_suite.config import (
 log = logging.getLogger(__name__)
 
 
+# Convention deviation (CLAUDE.md): custom exceptions normally live in
+# error_handling.py. This one deliberately stays here, because
+# error_handling.py imports it *from* this module — moving it would invert that
+# edge into a cycle, and would make this worker-side module pull in Dash, which
+# error_handling.py needs for set_props().
+# Consumers must re-export this class rather than define their own of the same
+# name: two distinct classes make `except ObjectStorageError` miss silently.
 class ObjectStorageError(Exception):
     """Exception raised for errors in the ObjectStorageManager class."""
 
@@ -52,6 +63,43 @@ def check_result(params: list, result: subprocess.CompletedProcess) -> None:
                 f"Command failed: {call}\n{error_msg}\n{output}",
             )
         raise ObjectStorageError
+
+
+def get_presigned_download_url(object_key: str, expiry: timedelta) -> str:
+    """Generate a presigned GET URL for an object in S3-compatible storage.
+
+    The URL carries its own credentials, so it can be handed to a client outside
+    the network (e.g. encoded into a QR code) without exposing the storage keys.
+
+    Args:
+        object_key: Key of the object (e.g. "{job_id}/result.csv")
+        expiry: Duration for which the URL is valid
+
+    Returns:
+        str: Presigned URL that can be downloaded without credentials
+
+    Raises:
+        ObjectStorageError: If S3 operation fails
+    """
+    secure = OBJECT_STORAGE_HOST.startswith("https://")
+    endpoint = OBJECT_STORAGE_HOST.replace("https://", "").replace("http://", "")
+    client = Minio(
+        endpoint=endpoint,
+        access_key=OBJECT_STORAGE_ACCESS_KEY,
+        secret_key=OBJECT_STORAGE_SECRET_KEY,
+        secure=secure,
+    )
+    try:
+        url = client.presigned_get_object(
+            OBJECT_STORAGE_BUCKET,
+            object_key,
+            expires=expiry,
+        )
+        log.debug(f"Generated presigned URL for {object_key}")
+        return url
+    except S3Error as e:
+        log.error(f"S3 error generating presigned URL for {object_key}: {e}")
+        raise ObjectStorageError(f"Presigning failed for {object_key}") from e
 
 
 def run_rclone_with_retry(params: list) -> subprocess.CompletedProcess:

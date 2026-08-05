@@ -30,7 +30,7 @@ working tree. A standalone downstream app would instead pin a git tag:
 
 ```toml
 dependencies = [
-    "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.1.0",
+    "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.3.0",
 ]
 ```
 
