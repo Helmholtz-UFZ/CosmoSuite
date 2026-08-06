@@ -32,11 +32,17 @@ console scripts are stale.
 
 `.venv/bin/pytest` (like every console script) hardcodes an **absolute**
 interpreter path in its shebang. Moving or renaming the repository directory
-leaves that path pointing into the old location — `uv run pytest` then execs a
-*different* interpreter with a *different* `site-packages`. `uv run python`
-is unaffected, because uv resolves that interpreter itself, and native binaries
-like `ruff` are unaffected too, so lint keeps passing while tests cannot even
-collect.
+leaves that path pointing at an interpreter that no longer exists, and
+`uv run pytest` then **silently falls through to another `pytest` on `PATH`** —
+typically the one in an active `VIRTUAL_ENV` — whose `site-packages` has none of
+this project's dependencies. Verified by reproduction: with a dead shebang,
+`uv run pytest --version` answered the global venv's `9.0.3` instead of the
+project's `8.4.2`.
+
+Note what stays healthy and hides the problem: `uv run python` is fine, because
+uv resolves that interpreter itself, so `import redis` works when you check it
+by hand. Native binaries like `ruff` are fine too, so lint keeps passing while
+tests cannot even collect.
 
 Check and repair:
 
