@@ -35,7 +35,7 @@ from cosmo_suite.object_storage_manager import (
     get_files,
     save_files,
 )
-from cosmo_suite.pydantic_models import BaseJobConfig, validate_job_id
+from cosmo_suite.pydantic_models import UploadJobConfig, validate_job_id
 
 log = logging.getLogger(__name__)
 
@@ -70,9 +70,11 @@ class Job:
     and coordinates with background task processing.
     """
 
-    # Injected by the application at startup — see BaseJobConfig and the
+    # Injected by the application at startup — see UploadJobConfig and the
     # config-model contract in docs/plan/cosmo-core-package-boundary.md.
-    config_model: type[BaseJobConfig] | None = None  # REQUIRED; fail-loud if unset
+    # UploadJobConfig, not BaseJobConfig: this class reads and writes
+    # `model.upload_file_name` (upload_file, reset, dump_parameters).
+    config_model: type[UploadJobConfig] | None = None  # REQUIRED; fail-loud if unset
     file_validator: Callable[[str], None] | None = None  # optional upload validator
     submit_handler: Callable[[Job], tuple[str | None, bool]] | None = None
     # Stamped into the job's `version` column as provenance. Defaults to the
@@ -82,7 +84,7 @@ class Job:
     app_version: str = FRAMEWORK_VERSION
 
     job_id: str
-    model: BaseJobConfig
+    model: UploadJobConfig
     start_date: date
     submitted: bool
     notified_end: bool
@@ -96,17 +98,29 @@ class Job:
         job_id=None,
         new_job_id=None,
         model=None,
+        *,
+        overwrite=False,
     ):
-        """Init class either by id, by model or make a new one."""
+        """Init class either by id, by model or make a new one.
+
+        Args:
+            job_id: Load this existing job.
+            new_job_id: Create a new job under this id.
+            model: Create a job from an already-built config model.
+            overwrite: Only meaningful with ``job_id``. Replace local files
+                that differ from object storage. A worker picking up a job on
+                a pod with a stale working directory needs this; the web
+                process, which may hold local edits not yet uploaded, does not.
+        """
         if self.config_model is None:
             raise RuntimeError(
-                "Job.config_model is not set — the application must inject a "
-                "BaseJobConfig subclass (via `Job.config_model = <YourConfig>`) "
+                "Job.config_model is not set — the application must inject an "
+                "UploadJobConfig subclass (via `Job.config_model = <YourConfig>`) "
                 "at startup before constructing a Job."
             )
         if job_id is not None:
             self.job_id = job_id
-            self.load()
+            self.load(overwrite=overwrite)
         elif model is not None:
             self._init_from_model(model)
         else:
@@ -116,8 +130,12 @@ class Job:
         """Represent class as string."""
         return self.job_id
 
-    def load(self):
-        """Load job from database and store files in working dir."""
+    def load(self, overwrite=False):
+        """Load job from database and store files in working dir.
+
+        Args:
+            overwrite: Passed to ``get_files`` — see ``__init__``.
+        """
         log.info(f"Load submission {self.job_id}")
 
         try:
@@ -137,7 +155,7 @@ class Job:
 
         self.working_dir = JOB_WORK_DIR_TEMPLATE.format(job_id=self.job_id)
         os.makedirs(self.working_dir, exist_ok=True)
-        get_files(self.job_id)
+        get_files(self.job_id, overwrite=overwrite)
         log.debug(
             f"Job {self.job_id} files downloaded from object storage",
         )

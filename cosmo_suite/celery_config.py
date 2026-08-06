@@ -81,9 +81,13 @@ class BaseCeleryConfig:
     task_retry_delay = 60  # 1 minute
     task_max_retries = 3
 
-    # Task time limits
-    task_soft_time_limit = 3600  # 1 hour soft limit
-    task_time_limit = 3900  # 65 minutes hard limit
+    # Task time limits — no default. Only the domain knows how long its
+    # computation legitimately runs; a framework-imposed ceiling kills exactly
+    # the large jobs an app exists for (measured in COSMONAUT: O(n²) sensor
+    # routing, not tileable, hit the former 65-minute hard limit). An app that
+    # wants a ceiling sets it explicitly in its own CeleryConfig subclass.
+    task_soft_time_limit = None
+    task_time_limit = None
 
     # Logging - Disable Celery's logging to use our PostgreSQL logging
     worker_hijack_root_logger = False  # Don't hijack root logger

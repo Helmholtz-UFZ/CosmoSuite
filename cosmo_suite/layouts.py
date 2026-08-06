@@ -58,19 +58,33 @@ loading_overlay = dbc.Modal(
 )
 
 
-def app_layout():
-    """Create the main page layout with navbar and content."""
+def app_layout(with_reset=False):
+    """Create the main page layout with navbar and content.
+
+    Args:
+        with_reset: Include the job-reset confirmation modal and register its
+            callbacks. Opt-in, because an app that offers no reset action would
+            otherwise carry two callbacks that can never fire — the framework
+            must not put a feature into a consumer's process uninvited. An app
+            that opts in triggers the modal by writing
+            ``{"job_id": …, "action": "resubmit"|"reset"}`` into
+            RESET_JOB_STORE_SHARED_ID.
+    """
+    children = [
+        dcc.Location(id=URL_LOCATION_SHARED_ID, refresh=True),
+        error_modal,
+        create_navbar(),
+        dash.page_container,
+        loading_overlay,
+    ]
+
+    if with_reset:
+        register_reset_callbacks()
+        children += [reset_confirm_modal, dcc.Store(id=RESET_JOB_STORE_SHARED_ID)]
+
     return html.Div(
         className="d-flex flex-column min-vh-100 bg-light",
-        children=[
-            dcc.Location(id=URL_LOCATION_SHARED_ID, refresh=True),
-            error_modal,
-            create_navbar(),
-            dash.page_container,
-            loading_overlay,
-            reset_confirm_modal,
-            dcc.Store(id=RESET_JOB_STORE_SHARED_ID),
-        ],
+        children=children,
     )
 
 
@@ -188,9 +202,12 @@ def job_not_found_layout(job_id):
 
 
 def landing_page_layout_column(
-    header_title, header_id, job_id_store, job_id, main_content_id
+    header_title, header_id, job_id_store, job_id, main_content_id, wrapper_class=None
 ):
-    """Create a landing page layout for a given job ID."""
+    """Create a landing page layout for a given job ID.
+
+    ``wrapper_class`` is passed through to page_container_column_layout.
+    """
     header = create_header(header_title, "Loading ...", bg_color="bg-secondary")
 
     content = [
@@ -210,11 +227,24 @@ def landing_page_layout_column(
             className="flex-grow-1 d-flex flex-column",
         ),
     ]
-    return page_container_column_layout(content)
+    return page_container_column_layout(content, wrapper_class=wrapper_class)
 
 
-def page_container_column_layout(content, main_content_id="main-content-container"):
-    """Create a page container with a single column layout."""
+def page_container_column_layout(
+    content, main_content_id="main-content-container", wrapper_class=None
+):
+    """Create a page container with a single column layout.
+
+    Args:
+        content: Children of the content column.
+        main_content_id: HTML id of the content column.
+        wrapper_class: Bootstrap classes for an enclosing div. An app whose
+            shell puts pages next to something else — COSMONAUT renders a map
+            beside them — needs a marker class it can select on to give these
+            pages the full width. Without it the only hook is
+            ``#main-content-container``, which forces the app to key its CSS on
+            a framework-internal id. Omit it and the DOM is unchanged.
+    """
     class_names_content = "col-md-11 col-lg-10 col-xl-9 bg-white border border-dark rounded p-0 mb-4 mt-2 d-flex flex-column"  # noqa
     page = dbc.Row(
         dbc.Col(
@@ -224,65 +254,85 @@ def page_container_column_layout(content, main_content_id="main-content-containe
         ),
         className="flex-grow-1 d-flex justify-content-center g-0",
     )
+    if wrapper_class is not None:
+        return html.Div(page, className=wrapper_class)
     return page
 
 
 log = logging.getLogger(__name__)
 
 
-@callback(
-    Output(RESET_CONFIRM_MODAL_SHARED_ID, "is_open", allow_duplicate=True),
-    Output(RESET_BODY_DIV_SHARED_ID, "children"),
-    Input(RESET_JOB_STORE_SHARED_ID, "data"),
-    prevent_initial_call=True,
-)
-def open_reset_modal(store_data):
-    """Open the reset confirmation modal when the store receives data."""
-    if store_data is None:
-        return False, dash.no_update
-    if store_data["action"] == "resubmit":
-        msg = "This will reset the job to PENDING, delete all results, and resubmit."
-    else:
-        msg = "This will reset the job to PENDING and delete all results."
-    return True, msg
+# Dash raises DuplicateCallback if the same callback is registered twice, and
+# `app.layout` may legitimately be a callable that Dash invokes per request.
+# Hence a registration guard rather than a plain call.
+_reset_callbacks_registered = False
 
 
-@callback(
-    Output(RESET_CONFIRM_MODAL_SHARED_ID, "is_open", allow_duplicate=True),
-    Output(URL_LOCATION_SHARED_ID, "href", allow_duplicate=True),
-    Output(RESET_JOB_STORE_SHARED_ID, "data", allow_duplicate=True),
-    Output(LOADING_OVERLAY_MODAL_SHARED_ID, "is_open", allow_duplicate=True),
-    Input(RESET_CONFIRM_BUTTON_SHARED_ID, "n_clicks"),
-    Input(RESET_CANCEL_BUTTON_SHARED_ID, "n_clicks"),
-    State(RESET_JOB_STORE_SHARED_ID, "data"),
-    prevent_initial_call=True,
-)
-def handle_reset_confirm(confirm_clicks, cancel_clicks, store_data):
-    """Handle confirm/cancel on the reset modal."""
-    triggered_ids = {
-        t["prop_id"].split(".")[0]
-        for t in callback_context.triggered
-        if t["value"] is not None
-    }
+def register_reset_callbacks():
+    """Register the job-reset callbacks (idempotent).
 
-    if RESET_CANCEL_BUTTON_SHARED_ID in triggered_ids:
-        return False, dash.no_update, None, dash.no_update
+    Called by ``app_layout(with_reset=True)``; call it directly only when
+    building a layout by hand rather than through ``app_layout``.
+    """
+    global _reset_callbacks_registered
+    if _reset_callbacks_registered:
+        return
+    _reset_callbacks_registered = True
 
-    if RESET_CONFIRM_BUTTON_SHARED_ID in triggered_ids:
-        job = Job(job_id=store_data["job_id"])
-        job.reset()
-
-        if store_data["action"] == "resubmit":
-            job.submit()
-            path = f"/job-submission/{job.job_id}"
-        else:
-            path = f"/input/{job.job_id}"
-
-        return False, path, None, False
-
-    return (
-        dash.no_update,
-        dash.no_update,
-        dash.no_update,
-        dash.no_update,
+    @callback(
+        Output(RESET_CONFIRM_MODAL_SHARED_ID, "is_open", allow_duplicate=True),
+        Output(RESET_BODY_DIV_SHARED_ID, "children"),
+        Input(RESET_JOB_STORE_SHARED_ID, "data"),
+        prevent_initial_call=True,
     )
+    def open_reset_modal(store_data):
+        """Open the reset confirmation modal when the store receives data."""
+        if store_data is None:
+            return False, dash.no_update
+        if store_data["action"] == "resubmit":
+            msg = (
+                "This will reset the job to PENDING, delete all results, and resubmit."  # noqa
+            )
+        else:
+            msg = "This will reset the job to PENDING and delete all results."
+        return True, msg
+
+    @callback(
+        Output(RESET_CONFIRM_MODAL_SHARED_ID, "is_open", allow_duplicate=True),
+        Output(URL_LOCATION_SHARED_ID, "href", allow_duplicate=True),
+        Output(RESET_JOB_STORE_SHARED_ID, "data", allow_duplicate=True),
+        Output(LOADING_OVERLAY_MODAL_SHARED_ID, "is_open", allow_duplicate=True),
+        Input(RESET_CONFIRM_BUTTON_SHARED_ID, "n_clicks"),
+        Input(RESET_CANCEL_BUTTON_SHARED_ID, "n_clicks"),
+        State(RESET_JOB_STORE_SHARED_ID, "data"),
+        prevent_initial_call=True,
+    )
+    def handle_reset_confirm(confirm_clicks, cancel_clicks, store_data):
+        """Handle confirm/cancel on the reset modal."""
+        triggered_ids = {
+            t["prop_id"].split(".")[0]
+            for t in callback_context.triggered
+            if t["value"] is not None
+        }
+
+        if RESET_CANCEL_BUTTON_SHARED_ID in triggered_ids:
+            return False, dash.no_update, None, dash.no_update
+
+        if RESET_CONFIRM_BUTTON_SHARED_ID in triggered_ids:
+            job = Job(job_id=store_data["job_id"])
+            job.reset()
+
+            if store_data["action"] == "resubmit":
+                job.submit()
+                path = f"/job-submission/{job.job_id}"
+            else:
+                path = f"/input/{job.job_id}"
+
+            return False, path, None, False
+
+        return (
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )

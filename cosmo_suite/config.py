@@ -48,7 +48,12 @@ env_vars = [
 ]
 
 # s/=.*//g |'<,'> s/^.*$/& = getenv("&")/g | noh
-WEB_WORK_DIR = getenv("WEB_WORK_DIR")
+# Resolved against the CWD at import time, on purpose. A relative value (the
+# .env files ship "./work_dir") reaches Flask's send_from_directory unresolved,
+# and Flask resolves relative paths against app.root_path — the installed app
+# package — not the CWD. The result is a silent 404 for every job file, with no
+# import error and no failing test (measured in COSMONAUT).
+WEB_WORK_DIR = os.path.abspath(getenv("WEB_WORK_DIR"))
 WEB_OUTSIDE_URL = getenv("WEB_OUTSIDE_URL")
 PORT = getenv("FLASK_PORT")
 POSTGRES_DB = getenv("POSTGRES_DB")

@@ -1,4 +1,10 @@
-"""Logging configuration for Cosmo_Template App."""
+"""Logging configuration for Cosmo Suite applications.
+
+Every builder takes ``excluded_packages``: the noisy libraries only the calling
+app pulls in. They are added to DEFAULT_EXCLUDED_PACKAGES, so an app never has
+to restate the framework's own exclusions — and never has to subclass the filter
+to extend it.
+"""
 
 import datetime
 import logging
@@ -159,30 +165,55 @@ class PostgreSQLHandler(logging.Handler):
         super().close()
 
 
+# Packages every consumer inherits: framework-level noise, nothing domain-specific.
+DEFAULT_EXCLUDED_PACKAGES = ("watchdog", "selenium")
+EXCLUDED_MODULES = ("_internal",)
+
+
 class ExcludeSubmodulesFilter(logging.Filter):
-    """Exclude submodules."""
+    """Drop records from noisy third-party packages."""
+
+    def __init__(self, excluded_packages=()):
+        """Initialize the filter.
+
+        Args:
+            excluded_packages: Packages to mute *in addition to*
+                DEFAULT_EXCLUDED_PACKAGES. An app passes the libraries only it
+                pulls in (matplotlib, rasterio, …), whose DEBUG output would
+                otherwise fill the logs table.
+        """
+        super().__init__()
+        self.excluded_packages = (*DEFAULT_EXCLUDED_PACKAGES, *excluded_packages)
 
     def filter(self, record):
-        """Filter."""
-        excluded_packages = [
-            "watchdog",
-            "selenium",
-        ]
-        excluded_modules = [
-            "_internal",
-        ]
+        """Return False for records from an excluded package or module."""
         return (
-            not any(record.name.startswith(package) for package in excluded_packages)
-            and record.module not in excluded_modules
+            not record.name.startswith(self.excluded_packages)
+            and record.module not in EXCLUDED_MODULES
         )
 
 
-def get_logger_config_computation(log_file_path):
-    """Get the config dic for the computation logger."""
+def _filter_config(excluded_packages):
+    """Build the dictConfig ``filters`` block, wiring in the extra packages."""
+    return {
+        "exclude_submodules": {
+            "()": ExcludeSubmodulesFilter,
+            "excluded_packages": list(excluded_packages),
+        }
+    }
+
+
+def get_logger_config_computation(log_file_path, excluded_packages=()):
+    """Get the config dic for the computation logger.
+
+    Args:
+        log_file_path: Path of the job's log file.
+        excluded_packages: Extra packages to mute — see ExcludeSubmodulesFilter.
+    """
     return {
         "version": 1,
         "disable_existing_loggers": False,
-        "filters": {"exclude_submodules": {"()": ExcludeSubmodulesFilter}},
+        "filters": _filter_config(excluded_packages),
         "handlers": {
             "file": {
                 "class": "logging.FileHandler",
@@ -206,7 +237,7 @@ def get_logger_config_computation(log_file_path):
     }
 
 
-def _build_stream_config(stream, disable_existing_loggers):
+def _build_stream_config(stream, disable_existing_loggers, excluded_packages):
     """Build a logging config that writes to a stream and PostgreSQL.
 
     Args:
@@ -215,6 +246,7 @@ def _build_stream_config(stream, disable_existing_loggers):
         disable_existing_loggers: Whether to disable loggers not in the config.
             False preserves Celery's own handlers; True is the default for the
             web process in production.
+        excluded_packages: Extra packages to mute — see ExcludeSubmodulesFilter.
 
     Returns:
         dict: Logging configuration dictionary for use with dictConfig()
@@ -226,7 +258,7 @@ def _build_stream_config(stream, disable_existing_loggers):
             "default": {"format": format_string},
             "message_only": {"format": "%(message)s"},
         },
-        "filters": {"exclude_submodules": {"()": ExcludeSubmodulesFilter}},
+        "filters": _filter_config(excluded_packages),
         "handlers": {
             "stream": {
                 "class": "logging.StreamHandler",
@@ -251,13 +283,14 @@ def _build_stream_config(stream, disable_existing_loggers):
     }
 
 
-def get_logger_config_web(debug):
+def get_logger_config_web(debug, excluded_packages=()):
     """Get the logging configuration for the web process (Dash/Flask).
 
     Writes to sys.stderr and PostgreSQL.
 
     Args:
         debug (bool): Whether to enable debug mode logging
+        excluded_packages: Extra packages to mute — see ExcludeSubmodulesFilter.
 
     Returns:
         dict: Logging configuration dictionary for use with dictConfig()
@@ -265,10 +298,11 @@ def get_logger_config_web(debug):
     return _build_stream_config(
         stream="ext://sys.stderr",
         disable_existing_loggers=False,
+        excluded_packages=excluded_packages,
     )
 
 
-def get_logger_config_worker():
+def get_logger_config_worker(excluded_packages=()):
     """Get the logging configuration for use inside a Celery worker task.
 
     Writes to sys.__stderr__ (the real stderr fd) instead of sys.stderr.
@@ -279,10 +313,14 @@ def get_logger_config_worker():
     disable_existing_loggers is always False to preserve Celery's own
     logging handlers.
 
+    Args:
+        excluded_packages: Extra packages to mute — see ExcludeSubmodulesFilter.
+
     Returns:
         dict: Logging configuration dictionary for use with dictConfig()
     """
     return _build_stream_config(
         stream="ext://sys.__stderr__",
         disable_existing_loggers=False,
+        excluded_packages=excluded_packages,
     )

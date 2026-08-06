@@ -11,7 +11,7 @@ The framework `Job` is generic; this app injects the domain at startup (in both
 `csv_profiler/app.py` and `csv_profiler/celery_app.py`):
 
 ```python
-Job.config_model   = ProfileConfig                        # a BaseJobConfig subclass
+Job.config_model   = ProfileConfig                        # an UploadJobConfig subclass
 Job.file_validator = staticmethod(validate_csv)
 Job.submit_handler = staticmethod(submit_computation_job)
 ```
@@ -30,7 +30,7 @@ working tree. A standalone downstream app would instead pin a git tag:
 
 ```toml
 dependencies = [
-    "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.3.0",
+    "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.4.0",
 ]
 ```
 

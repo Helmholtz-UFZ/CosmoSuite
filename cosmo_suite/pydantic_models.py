@@ -1,11 +1,18 @@
 """Framework pydantic models: job-id validation + the base job-config contract.
 
-`BaseJobConfig` is the contract for a Job's `model`. A domain provides a config
-model that subclasses it (adding its own fields) and injects it via
-`Job.config_model` at startup. Every domain config model therefore carries the
-generic `job_id` and `upload_file_name` fields the framework `Job` relies on to
-persist, reload, and track the single uploaded input file without knowing the
-domain. See docs/plan/cosmo-core-package-boundary.md (config-model contract).
+The contract comes in two layers:
+
+`BaseJobConfig` is the minimal one — a validated `job_id` and
+`validate_assignment=True`. An app whose job table has no upload column
+subclasses this and owes the framework nothing else.
+
+`UploadJobConfig` adds `upload_file_name`. That field is not part of the
+minimal contract, it belongs to the usage pattern of the framework `Job`, which
+persists, reloads, and tracks a single uploaded input file without knowing the
+domain. An app adopting `cosmo_suite.job.Job` must therefore subclass
+`UploadJobConfig` and inject it via `Job.config_model` at startup.
+
+See docs/plan/cosmo-core-package-boundary.md (config-model contract).
 """
 
 import logging
@@ -40,19 +47,11 @@ def validate_job_id(job_id: str) -> str:
 
 
 class BaseJobConfig(BaseModel):
-    """Base contract for a Job's configuration model.
+    """Minimal contract for a job's configuration model.
 
-    A domain config model MUST subclass this so the framework ``Job`` can
-    persist, reload, and track the single uploaded input file generically.
-    Domains add their own fields on top.
+    A validated ``job_id`` plus assignment validation — nothing else. Apps that
+    do not use the framework ``Job`` subclass this and add their own fields.
     """
-
-    upload_file_name: Optional[str] = Field(
-        None,
-        description="Name of the uploaded input file",
-        title="Upload file name",
-        json_schema_extra={"type": "hidden"},
-    )
 
     job_id: Annotated[
         str,
@@ -67,3 +66,20 @@ class BaseJobConfig(BaseModel):
 
     # Security feature: No model can have an invalid job_id
     model_config = ConfigDict(validate_assignment=True)
+
+
+class UploadJobConfig(BaseJobConfig):
+    """Contract for a config model used with the framework ``Job``.
+
+    Adds the single-upload-file tracking that ``Job`` relies on
+    (``upload_file``, ``reset``, and the parameters dump all read this field).
+    A domain config model for the framework ``Job`` MUST subclass this;
+    ``BaseJobConfig`` alone is not enough.
+    """
+
+    upload_file_name: Optional[str] = Field(
+        None,
+        description="Name of the uploaded input file",
+        title="Upload file name",
+        json_schema_extra={"type": "hidden"},
+    )

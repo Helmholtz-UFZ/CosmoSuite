@@ -1,4 +1,4 @@
-# Convention: the config-model contract (`BaseJobConfig`)
+# Convention: the config-model contract (`UploadJobConfig`)
 
 A `cosmo_suite` `Job` is generic over its configuration `model`. A domain
 plugs its configuration into the framework by injecting four class attributes on
@@ -6,7 +6,7 @@ plugs its configuration into the framework by injecting four class attributes on
 worker entrypoint (`celery_app.py`), **before any `Job` is constructed**:
 
 ```python
-Job.config_model   = ProfileConfig                        # a BaseJobConfig subclass
+Job.config_model   = ProfileConfig                        # an UploadJobConfig subclass
 Job.file_validator = staticmethod(validate_csv)           # optional; None = no-op
 Job.submit_handler = staticmethod(submit_computation_job)
 Job.app_version    = version("csv-profiler")              # optional; provenance stamp
@@ -15,15 +15,31 @@ Job.app_version    = version("csv-profiler")              # optional; provenance
 ## The `config_model` contract
 
 `Job.config_model` MUST be a subclass of
-`cosmo_suite.pydantic_models.BaseJobConfig`. `BaseJobConfig` provides the two
-fields the framework `Job` relies on generically:
+`cosmo_suite.pydantic_models.UploadJobConfig`, which provides the two fields the
+framework `Job` relies on generically:
 
 - **`job_id: str`** — validated by `validate_job_id`; the job's identity.
+  Contributed by `BaseJobConfig`, together with `validate_assignment=True`, so
+  an invalid id cannot be assigned after construction either.
 - **`upload_file_name: str | None`** — the single uploaded input file the `Job`
-  tracks (used by `Job.upload_file` and `Job.reset`).
+  tracks (used by `Job.upload_file` and `Job.reset`). Contributed by
+  `UploadJobConfig`.
 
 A domain config model adds its own fields on top (the CSV profiler example adds
 `handle_missing`, `histogram_bins`, `compute_correlation`, …).
+
+### Which base to subclass
+
+The two layers exist because `upload_file_name` is not part of a job
+configuration's minimal contract — it belongs to the framework `Job`'s usage
+pattern, and an app whose job table has no such column would have to invent one
+just to satisfy the base class (measured in COSMONAUT: `save()` broke on the
+missing column).
+
+| Your app… | Subclass |
+|---|---|
+| uses `cosmo_suite.job.Job` | **`UploadJobConfig`** |
+| keeps its own `Job` class | **`BaseJobConfig`** (job_id contract only) |
 
 `Job.config_model` is **fail-loud**: it defaults to `None`, and constructing a
 `Job` without setting it raises `RuntimeError`. `file_validator` may stay `None`

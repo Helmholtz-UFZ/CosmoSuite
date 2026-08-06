@@ -77,8 +77,9 @@ log.info("Celery Beat scheduler started in background thread")
 # Serve files
 serve_files(app)
 
-# Main app layout
-app.layout = app_layout()
+# Main app layout. with_reset=True: the input and job-submission pages offer a
+# "Reset job" action, so this app opts into the framework's reset modal.
+app.layout = app_layout(with_reset=True)
 
 if __name__ == "__main__":
     app.run(debug=DEBUG, port=PORT, host="0.0.0.0")

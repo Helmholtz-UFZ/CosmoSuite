@@ -49,7 +49,11 @@ def start_computation_task(self, job_id):
     """
     log.info(f"Starting computation for job {job_id}")
     try:
-        job = Job(job_id=job_id)
+        # overwrite=True: a worker's working directory must mirror object
+        # storage. The default keeps existing local files, which is what the
+        # web process wants (it may hold edits not yet uploaded) but would let
+        # a stale copy on this pod shadow the input the user just submitted.
+        job = Job(job_id=job_id, overwrite=True)
         log.debug("Job loaded")
 
         # Set up file-based logging for this computation

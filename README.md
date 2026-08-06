@@ -33,13 +33,25 @@ way `dash_form_factory` is already shared across the suite:
 ```toml
 [project]
 dependencies = [
-    "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.3.0",
+    "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.4.0",
 ]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 ```
 
 Auth uses `CI_JOB_TOKEN` / SSH; `uv` locks the resolved commit. A domain plugs itself
-into the framework by injecting three `Job` seams at startup — see the
+into the framework by injecting four `Job` seams at startup — see the
 [config-model contract](docs/conventions/config_model_contract.md).
+
+Two things bite every consumer, and neither announces itself as a framework problem:
+
+- **`[tool.hatch.metadata] allow-direct-references = true` is mandatory.** Without it
+  hatchling rejects the `git+https://` pin outright — building the app's own wheel
+  fails, not the dependency install.
+- **`git` must be installed in the CI image.** `uv export` writes the dependency as a
+  `git+https://` URL, so an image build without `git` breaks the next time `uv.lock`
+  changes — long after the change that caused it.
 
 ### Start a new app
 

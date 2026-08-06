@@ -21,6 +21,14 @@ from cosmo_suite.config import (
 
 log = logging.getLogger(__name__)
 
+# Subprocess timeouts in seconds. Every rclone call gets one: without it a hung
+# rclone — an unreachable store, a half-open TCP connection — blocks the calling
+# worker forever (measured in COSMONAUT on Kubernetes).
+# Two tiers, because the right bound depends on what scales with the data:
+TRANSFER_TIMEOUT = 600  # copy / sync / purge — grows with the job's file volume
+CONTROL_TIMEOUT = 60  # listings, single-file delete, config, mkdir
+CONNECTION_CHECK_TIMEOUT = 5  # the pre-flight below, which must fail fast
+
 
 # Convention deviation (CLAUDE.md): custom exceptions normally live in
 # error_handling.py. This one deliberately stays here, because
@@ -102,17 +110,62 @@ def get_presigned_download_url(object_key: str, expiry: timedelta) -> str:
         raise ObjectStorageError(f"Presigning failed for {object_key}") from e
 
 
-def run_rclone_with_retry(params: list) -> subprocess.CompletedProcess:
+def _verify_remote_reachable() -> None:
+    """Fail fast if the object storage remote cannot be reached.
+
+    Without this pre-flight a transfer against a dead address burns the full
+    retry schedule — three attempts of up to ``TRANSFER_TIMEOUT`` each — before
+    reporting a failure the first second already knew about.
+
+    Raises:
+        ObjectStorageError: If the remote is unreachable or answers too slowly
+    """
+    check_params = [
+        "rclone",
+        "lsd",
+        f"{OBJECT_STORAGE_REMOTE_NAME}:",
+        "--contimeout",
+        "3s",
+    ]
+    try:
+        result = subprocess.run(
+            check_params,
+            capture_output=True,
+            text=True,
+            timeout=CONNECTION_CHECK_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        log.error("Object storage connection check timed out — remote unreachable")
+        raise ObjectStorageError("Object storage connection check timed out") from None
+
+    if result.returncode != 0:
+        log.error(f"Object storage connection check failed: {result.stderr}")
+        raise ObjectStorageError("Object storage connection check failed")
+
+    log.debug("Object storage connection check passed")
+
+
+def run_rclone_with_retry(
+    params: list,
+    timeout: float = TRANSFER_TIMEOUT,
+    check_connection: bool = False,
+) -> subprocess.CompletedProcess:
     """Run rclone command with retry logic for NFS lock file conflicts.
 
     Args:
         params: The rclone command parameters
+        timeout: Seconds before a single attempt is killed
+        check_connection: Verify the remote is reachable before the first attempt
 
     Raises:
-        ObjectStorageError: If all retry attempts fail
+        ObjectStorageError: If all retry attempts fail, the command times out,
+            or the connection check fails
     """
     max_retries = 3
     retry_delay = 2
+
+    if check_connection:
+        _verify_remote_reachable()
 
     for attempt in range(max_retries):
         try:
@@ -120,8 +173,14 @@ def run_rclone_with_retry(params: list) -> subprocess.CompletedProcess:
                 params,
                 capture_output=True,
                 text=True,
+                timeout=timeout,
             )
             check_result(params, result)
+        except subprocess.TimeoutExpired:
+            # Not retried: a command that ran into its timeout has no reason to
+            # succeed within the same budget on the next attempt.
+            log.error(f"Command timed out after {timeout}s: {' '.join(params)}")
+            raise ObjectStorageError(f"Command timed out after {timeout}s") from None
         except ObjectStorageError:
             if attempt < max_retries - 1:
                 log.warning(
@@ -160,6 +219,7 @@ def setup_remote() -> None:
         config_params,
         capture_output=True,
         text=True,
+        timeout=CONTROL_TIMEOUT,
     )
     check_result(config_params, result)
 
@@ -202,7 +262,7 @@ def get_remote_files(remote_path: str) -> set:
     """
     ls_params = ["rclone", "ls", remote_path]
 
-    result = run_rclone_with_retry(ls_params)
+    result = run_rclone_with_retry(ls_params, timeout=CONTROL_TIMEOUT)
 
     # rclone ls returns lines like: "  123456 path/to/file.txt"
     # Extract just the filenames
@@ -217,7 +277,12 @@ def get_remote_files(remote_path: str) -> set:
     return files
 
 
-def get_files(dirname: str) -> None:
+def get_files(
+    dirname: str,
+    *,
+    overwrite: bool = False,
+    timeout: float = TRANSFER_TIMEOUT,
+) -> None:
     """Download files from object storage to local work directory.
 
     This copies files from remote to local without deleting local files using rclone
@@ -225,6 +290,10 @@ def get_files(dirname: str) -> None:
 
     Args:
         dirname: Name of the directory to download
+        overwrite: Replace local files that differ from the remote
+            (``--checksum``). The default (``--ignore-existing``) only fetches
+            files that are missing locally.
+        timeout: Seconds before a single download attempt is killed
 
     Raises:
         ObjectStorageError: If download fails or verification fails
@@ -236,16 +305,21 @@ def get_files(dirname: str) -> None:
     remote_path = f"{OBJECT_STORAGE_REMOTE_NAME}:{OBJECT_STORAGE_BUCKET}/{dirname}"
 
     local_files_before = get_local_files(local_path)
-    # Download: copy files from remote to local without deleting local files
+    # Download: copy files from remote to local without deleting local files.
+    # The default is the loss-free direction: a stale remote copy must not
+    # clobber local edits that have not been uploaded yet (measured in
+    # COSMONAUT: street-selection edits were silently reverted). A caller whose
+    # local directory is meant to mirror the remote — a worker pod picking up a
+    # job — asks for it with overwrite=True.
     sync_params = [
         "rclone",
         "copy",
         remote_path,
         local_path,
-        "--checksum",
+        "--checksum" if overwrite else "--ignore-existing",
     ]
 
-    result = run_rclone_with_retry(sync_params)
+    result = run_rclone_with_retry(sync_params, timeout=timeout, check_connection=True)
     log.debug(f"Rclone sync result: {result.stdout}")
 
     # Verify download - check that all remote files are now in local
@@ -270,13 +344,14 @@ def get_files(dirname: str) -> None:
         raise ObjectStorageError(error_msg)
 
 
-def save_files(dirname: str) -> None:
+def save_files(dirname: str, timeout: float = TRANSFER_TIMEOUT) -> None:
     """Upload files from local work directory to object storage.
 
     This overwrites remote files with local files using rclone sync.
 
     Args:
         dirname: Name of the directory to upload
+        timeout: Seconds before a single upload attempt is killed
 
     Raises:
         ObjectStorageError: If upload fails or verification fails
@@ -303,7 +378,7 @@ def save_files(dirname: str) -> None:
         "--checksum",
     ]
 
-    run_rclone_with_retry(sync_params)
+    run_rclone_with_retry(sync_params, timeout=timeout, check_connection=True)
 
     # Verify upload — compare against pre-sync local listing, not a fresh one,
     # because concurrent workers may create new files between sync and verification.
@@ -323,11 +398,12 @@ def save_files(dirname: str) -> None:
         raise ObjectStorageError(error_msg)
 
 
-def delete_file_from_storage(filepath: str) -> None:
+def delete_file_from_storage(filepath: str, timeout: float = CONTROL_TIMEOUT) -> None:
     """Delete a file from the object storage using rclone.
 
     Args:
         filepath: Path of the file to delete from object storage
+        timeout: Seconds before a single delete attempt is killed
     """
     log.debug(
         f"Deleting file {filepath} from object storage.",
@@ -341,18 +417,23 @@ def delete_file_from_storage(filepath: str) -> None:
         remote_path,
     ]
 
-    run_rclone_with_retry(delete_params)
+    run_rclone_with_retry(delete_params, timeout=timeout)
 
     log.debug(
         f"Successfully deleted file {filepath} from object storage",
     )
 
 
-def delete_directory_from_storage(dirpath: str) -> None:
+def delete_directory_from_storage(
+    dirpath: str, timeout: float = TRANSFER_TIMEOUT
+) -> None:
     """Delete a directory from the object storage using rclone.
 
     Args:
         dirpath: Path of the directory to delete from object storage
+        timeout: Seconds before a single purge attempt is killed. The transfer
+            budget, not the control one: a purge walks every object below the
+            path, so it scales with the job's file count.
     """
     log.debug(
         f"Deleting directory {dirpath} from object storage.",
@@ -366,7 +447,7 @@ def delete_directory_from_storage(dirpath: str) -> None:
         remote_path,
     ]
 
-    run_rclone_with_retry(purge_params)
+    run_rclone_with_retry(purge_params, timeout=timeout)
 
     log.debug(
         f"Successfully deleted directory {dirpath} from object storage",
@@ -384,7 +465,7 @@ def create_bucket() -> None:
         f"{OBJECT_STORAGE_REMOTE_NAME}:",
     ]
 
-    result = run_rclone_with_retry(lsd_params)
+    result = run_rclone_with_retry(lsd_params, timeout=CONTROL_TIMEOUT)
 
     # Parse output to check if bucket exists
     # rclone lsd output format: "-1 2023-01-01 12:00:00        -1 bucket-name"
@@ -405,7 +486,7 @@ def create_bucket() -> None:
         remote_bucket,
     ]
 
-    run_rclone_with_retry(bucket_params)
+    run_rclone_with_retry(bucket_params, timeout=CONTROL_TIMEOUT)
 
 
 def main():
