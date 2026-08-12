@@ -1,3 +1,17 @@
+# Host-published ports are parameterised as ${…_HOST_PORT:-<today's value>} so that
+# the three sister stacks (cosmopolitan, cosmonaut, csv_profiler) can run side by side
+# on one machine — see cosmo-suite/docs/plan/local-port-allocation.md for the
+# allocation. With none of these variables set the resolved mappings are identical to
+# before, so CI and production are untouched.
+# Note the asymmetry: the left side is the *host* port, the right side stays fixed,
+# because that is what the service listens on inside the compose network. The
+# app-facing POSTGRES_PORT / REDIS_PORT / OBJECT_STORAGE_HOST answer a different
+# question ("where does the app connect to") and must not be reused here.
+# FLASK_PORT is the exception: it keeps its double role (the port the app binds inside
+# the container *and* the port the Dash test server binds outside Docker), so the
+# webserver mapping falls back to FLASK_PORT rather than to a literal. A literal
+# default would publish 8080 for anyone who sets only FLASK_PORT — a mismatch that
+# looks like the app not starting.
 services:
   cosmo-suite:
     image: cosmo-suite-webserver
@@ -13,7 +27,7 @@ services:
       TZ: Europe/Berlin
     user: "${DOCKER_UID}:${DOCKER_GID}"
     ports:
-      - "${FLASK_PORT}:${FLASK_PORT}"
+      - "${FLASK_HOST_PORT:-${FLASK_PORT}}:${FLASK_PORT}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,7 +69,7 @@ services:
     image: redis:7-alpine
     container_name: redis_cosmo_suite
     ports:
-      - "6379:6379"
+      - "${REDIS_HOST_PORT:-6379}:6379"
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
@@ -63,7 +77,7 @@ services:
   postgres:
     image: postgres:15
     ports:
-      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -81,8 +95,8 @@ services:
     image: minio/minio:latest
     container_name: minio_cosmo_suite
     ports:
-      - "9000:9000"
-      - "9001:9001" # Web-based admin console
+      - "${MINIO_HOST_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_HOST_PORT:-9001}:9001" # Web-based admin console
     environment:
       MINIO_ROOT_USER: accesskey
       MINIO_ROOT_PASSWORD: secretkey

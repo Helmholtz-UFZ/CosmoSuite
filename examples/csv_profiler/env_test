@@ -1,5 +1,14 @@
 # This environment file is used for testing in a local development setup. Start the
 # required services and then run the tests.
+#
+# Ports follow the suite-wide local allocation (csv_profiler slot: 8082 / 5434 / 6381 /
+# 9020 / 9021) so this suite can run at the same time as cosmopolitan's and cosmonaut's
+# — see cosmo-suite/docs/plan/local-port-allocation.md. Only this file and env_dev carry
+# the shifted values; env_ci keeps the defaults.
+#
+# The suite runs on the host, not in the compose network, so here the app-facing ports
+# (POSTGRES_PORT, REDIS_PORT, OBJECT_STORAGE_HOST) must match the *published* host ports
+# below. In env_dev they must not — see the note there.
 
 ### Development variables ###
 DOCKER_UID=1000
@@ -9,12 +18,14 @@ GUNICORN=0
 
 ###  Webserver ###
 WEB_WORK_DIR="./work_dir"
-FLASK_PORT=8080
-WEB_OUTSIDE_URL="http://localhost:8080"
+FLASK_PORT=8082
+FLASK_HOST_PORT=8082
+WEB_OUTSIDE_URL="http://localhost:8082"
 
 ### Postgres config ###
 POSTGRES_HOST_NAME="localhost"
-POSTGRES_PORT="5432"
+POSTGRES_PORT="5434"
+POSTGRES_HOST_PORT=5434
 POSTGRES_DB="cosmo_suite"
 POSTGRES_USER="cosmo_suite_user"
 POSTGRES_PASSWORD="test"
@@ -22,12 +33,15 @@ POSTGRES_PASSWORD="test"
 ### Minio ###
 OBJECT_STORAGE_ACCESS_KEY="accesskey"
 OBJECT_STORAGE_BUCKET="cosmo-suite-jobs"
-OBJECT_STORAGE_HOST="http://localhost:9000"
+OBJECT_STORAGE_HOST="http://localhost:9020"
+MINIO_HOST_PORT=9020
+MINIO_CONSOLE_HOST_PORT=9021
 OBJECT_STORAGE_REMOTE_NAME="cosmo-suite-remote"
 OBJECT_STORAGE_SECRET_KEY="secretkey"
 
 ### Redis ###
 REDIS_HOST="localhost"
-REDIS_PORT="6379"
+REDIS_PORT="6381"
+REDIS_HOST_PORT=6381
 REDIS_DB="0"
 REDIS_PASSWORD=""

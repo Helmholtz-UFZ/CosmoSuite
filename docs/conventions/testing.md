@@ -23,6 +23,37 @@ these first — they usually explain the failure without needing another run. No
 that `run_pytest.sh` clears previous artifacts by default (use `--keep-artifacts`
 to preserve them across runs).
 
+## Local port allocation across the three repos
+
+All three stacks used to publish the same host ports, so **no two suites could run at
+the same time**. Each repo now has its own slot. Canonical source, do not fork it:
+[`docs/plan/local-port-allocation.md`](../plan/local-port-allocation.md).
+
+| | Flask | Postgres | Redis | MinIO | Console |
+|---|---|---|---|---|---|
+| cosmopolitan | 8080 | 5432 | 6379 | 9000 | 9001 |
+| cosmonaut | 8081 | 5433 | 6380 | 9010 | 9011 |
+| **csv_profiler** | **8082** | **5434** | **6381** | **9020** | **9021** |
+
+Only `env_test` and `env_dev` carry the shifted values; `env_ci` keeps the defaults,
+and every `ports:` mapping in `docker-compose.yml` reads
+`${…_HOST_PORT:-<previous value>}`, so with none of the variables set the resolved
+mappings are unchanged — CI and production are untouched without editing a line there.
+
+Two rules that follow from it:
+
+- **Host port ≠ app-facing port.** `POSTGRES_PORT`, `REDIS_PORT` and
+  `OBJECT_STORAGE_HOST` say where the *app* connects. In `env_dev` the app runs inside
+  the compose network and must keep `5432` / `6379` / `minio:9000`; in `env_test` the
+  suite runs on the host, so there they must match the published ports. Setting a
+  service's published port on both sides of a mapping breaks the container, which does
+  not listen on the shifted port.
+- **A port collision does not look like a collision.** It shows up as setup ERRORs, or
+  as e2e tests failing against no server — i.e. as a bug somewhere else entirely. It
+  cost two agents two aborted runs each before the cause was found. If service startup
+  fails or the app is unreachable, check `docker ps` for a sister stack before reading
+  any code.
+
 ## Troubleshooting: `ModuleNotFoundError` for a package that is installed
 
 If `run_pytest.sh` dies during collection with something like

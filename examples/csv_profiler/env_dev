@@ -1,5 +1,15 @@
 # This environment file is used for development in a docker setup. Start everything via
 # docker compose up or use dev_up.sh script.
+#
+# Ports follow the suite-wide local allocation (csv_profiler slot: 8082 / 5434 / 6381 /
+# 9020 / 9021) so this stack can run at the same time as cosmopolitan's and cosmonaut's
+# — see cosmo-suite/docs/plan/local-port-allocation.md.
+#
+# Only the *_HOST_PORT variables move here. The app runs inside the compose network and
+# reaches the services by name on their fixed internal ports, so POSTGRES_PORT,
+# REDIS_PORT and OBJECT_STORAGE_HOST must stay at 5432 / 6379 / minio:9000. Shifting
+# those too would point the app at ports nothing listens on. (env_test is the mirror
+# image: the suite runs on the host, so there they must match the published ports.)
 
 ### Development variables ###
 DOCKER_UID=1000
@@ -9,13 +19,15 @@ GUNICORN=0
 
 ###  Webserver ###
 WEB_WORK_DIR="./work_dir"
-FLASK_PORT=8080
-WEB_OUTSIDE_URL="http://localhost:8080"
+FLASK_PORT=8082
+FLASK_HOST_PORT=8082
+WEB_OUTSIDE_URL="http://localhost:8082"
 
 ### Postgres credentials ###
 POSTGRES_DB="cosmo_suite"
 POSTGRES_HOST_NAME="postgres"
 POSTGRES_PORT="5432"
+POSTGRES_HOST_PORT=5434
 POSTGRES_USER="cosmo_suite_user"
 POSTGRES_PASSWORD="test"
 
@@ -23,11 +35,14 @@ POSTGRES_PASSWORD="test"
 OBJECT_STORAGE_ACCESS_KEY="accesskey"
 OBJECT_STORAGE_BUCKET="cosmo-suite-jobs"
 OBJECT_STORAGE_HOST="http://minio:9000"
+MINIO_HOST_PORT=9020
+MINIO_CONSOLE_HOST_PORT=9021
 OBJECT_STORAGE_REMOTE_NAME="cosmo-suite-remote"
 OBJECT_STORAGE_SECRET_KEY="secretkey"
 
 ### Redis ###
 REDIS_HOST="redis"
 REDIS_PORT="6379"
+REDIS_HOST_PORT=6381
 REDIS_DB="0"
 REDIS_PASSWORD=""
