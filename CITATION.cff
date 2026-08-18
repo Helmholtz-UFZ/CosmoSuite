@@ -20,8 +20,8 @@ authors:
     email: louis-ferdinand.trinkle@ufz.de
     affiliation: "Helmholtz Centre for Environmental Research – UFZ"
     orcid: "https://orcid.org/0009-0003-0434-939X"
-version: "0.4.0"
-date-released: "2026-08-06"
+version: "0.4.1"
+date-released: "2026-08-18"
 license: EUPL-1.2
 repository-code: "https://github.com/Helmholtz-UFZ/CosmoSuite"
 keywords:
