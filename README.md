@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/1338235120.svg)](https://doi.org/10.5281/zenodo.21996475)
+
 # Cosmo Suite
 
 The shared **Dash + Celery + PostgreSQL + MinIO** application framework at the core of
