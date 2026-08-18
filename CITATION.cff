@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: "COSMO Suite framework"
+abstract: >-
+  A reusable Software-as-a-Service framework that turns scientific Python code into
+  browser-based applications. It provides the application shell, Pydantic-driven form
+  generation, asynchronous job execution via Celery, persistence in PostgreSQL and
+  S3-compatible object storage, while the scientific method stays in an independent
+  computation module. Ships with a reference domain, a CSV statistical profiler, that
+  demonstrates the integration.
+type: software
+authors:
+  - family-names: Anders
+    given-names: John
+    email: john-eric.anders@ufz.de
+    affiliation: "Helmholtz Centre for Environmental Research – UFZ"
+  - family-names: Trinkle
+    given-names: Louis
+    email: louis-ferdinand.trinkle@ufz.de
+    affiliation: "Helmholtz Centre for Environmental Research – UFZ"
+version: "0.4.0"
+date-released: "2026-08-06"
+license: EUPL-1.2
+repository-code: "https://github.com/Helmholtz-UFZ/CosmoSuite"
+keywords:
+  - "Software-as-a-Service"
+  - "web application"
+  - "research software"
+  - "Dash"
+  - "Celery"
