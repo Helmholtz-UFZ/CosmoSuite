@@ -23,10 +23,20 @@ Die Suite ist Teil der **UFZ-Organisation** auf GitHub:
 > links, Reponame in der URL. Das funktioniert (`uv` liest den Namen aus der geholten
 > `pyproject.toml`), sieht aber nach einem Tippfehler aus. **Nicht „korrigieren".**
 >
-> Falls der Name doch angeglichen werden soll (`cosmo-suite`, wie Paket und GitLab-Repo):
-> **jetzt ist der einzige billige Moment.** Die Repos sind leer, kein Mirror konfiguriert,
-> kein Pin zeigt darauf, kein Zenodo-DOI hängt dran. Nach dem ersten Sync kostet es
-> Mirror-Neukonfiguration und macht jede schon geteilte URL ungültig.
+> **Entscheidung Louis (2026-08-19): `CosmoSuite` bleibt.** Der Name ist bewusst
+> gewählt, die Abweichung zum Paketnamen wird in Kauf genommen.
+>
+> **Und er kann sich später noch ändern.** Das hat zwei Folgen, die man vorher wissen
+> sollte:
+>
+> - **Der permanente Anker ist die Zenodo-DOI, nicht die GitHub-URL.** Genau deshalb
+>   gehört in C2 die DOI als „permanent link" und die GitHub-URL als Repository. Eine DOI
+>   übersteht eine Umbenennung, eine URL nur per Redirect.
+> - **Eine Umbenennung bricht den Pin nicht sofort — und das ist das Tückische.** GitHub
+>   hält Redirects auch für git-Operationen, der Pin funktioniert also weiter, bis jemand
+>   ein neues Repo unter dem alten Namen anlegt. Der Bruch kommt still und spät. Wird
+>   umbenannt, ist derselbe Tag die Gelegenheit, in beiden Apps neu zu pinnen
+>   (`pyproject.toml` + `uv lock` + ein CI-Lauf).
 
 Damit ist auch die C2-Anforderung „permanent" besser gedeckt als mit einem persönlichen
 Repo: die URL hängt an der Institution, nicht an einer Person, und übersteht
@@ -99,6 +109,13 @@ Doku nicht sicher zu entnehmen. Zwei Sekunden Prüfung, und ohne sie bricht der 
 Historie öffentlich wird. Nicht kritisch, aber vor dem Mirror bewusst entscheiden:
 hinnehmen, oder für künftige Commits `git config user.email` auf die UFZ-Adresse setzen.
 Nachträglich ändern hieße Historie umschreiben — dafür ist es zu geringfügig.
+
+**Dienstkonto + Relay in `env_prod`: bewusst drin gelassen.** Beide Apps tragen
+`EMAIL_USERNAME="soncosmo"` und `EMAIL_SERVER="smtp.ufz.de"` in der getrackten
+`env_prod`. **Entscheidung Louis (2026-08-19): unkritisch, bleibt.** Begründung: ein
+Kontoname ohne Passwort ist kein Zugang, und in `env_prod` steht keine
+`EMAIL_PASSWORD`-Zeile. Hier vermerkt, damit die Frage nicht bei jedem Durchgang neu
+gestellt wird.
 
 **Keine Secrets.** In allen Repos geprüft: die getrackten env-Dateien enthalten
 Platzhalter oder leere Werte, kein Passwort in `env_prod`. Deshalb voller
