@@ -76,10 +76,15 @@ geprüft hat.
 Nach dem ersten Sync in der GitHub-UI (oder per API) einen Release auf `v0.4.0` bzw. dem
 App-Tag anlegen — sonst archiviert Zenodo nichts und C2 bleibt ohne DOI.
 
-**Der Push-Mirror überschreibt.** Er drückt den GitLab-Stand über den GitHub-Stand.
-Niemals direkt auf GitHub committen oder mergen: das ist beim nächsten Sync weg. GitHub
-ist Leseseite, GitLab die Wahrheit. Issues und Discussions auf GitHub sind davon nicht
+**Der Push-Mirror überschreibt — und löscht auch.** Er drückt den GitLab-Stand über den
+GitHub-Stand. Niemals direkt auf GitHub committen oder mergen: das ist beim nächsten Sync
+weg. GitHub ist Leseseite, GitLab die Wahrheit. Issues und Discussions sind davon nicht
 betroffen — nur Git-Inhalte.
+
+**Gemessen am 2026-08-18:** Der Mirror synchronisiert **Löschungen mit**. Ein
+versehentlich gepushter Tag wurde in GitLab entfernt und war danach auch auf GitHub weg,
+ohne Zutun. Eine Tag-Korrektur macht man also in GitLab, GitHub folgt nach. (Eine frühere
+Fassung dieses Dokuments behauptete das Gegenteil — das war eine Annahme, keine Messung.)
 
 ---
 
@@ -132,6 +137,7 @@ Plan als Gate festgehalten.
 | Egress GitLab-Runner → github.com | ✅ beide Runner-Pools inkl. dind-Imagebuild |
 | Lizenz/Copyright symmetrisch | ✅ cosmo-suite, ✅ cosmopolitan, ⬜ cosmonaut |
 | Repos auf GitHub anlegen | ✅ public, leer, Team = Admin |
-| Push-Mirror je Repo | ⬜ |
+| Push-Mirror je Repo | ✅ per SSH-Deploy-Key, Tags kommen mit |
 | Pin auf GitHub-URL (beide Apps) | ⬜ Phase B |
+| Release-Tags mit Zitations-Metadaten | ✅ `v0.4.1` / `0.2.4` / `0.3.5` |
 | Release + Zenodo-DOI | ⬜ Louis |
