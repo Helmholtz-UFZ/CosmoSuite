@@ -13,9 +13,20 @@ Die Suite ist Teil der **UFZ-Organisation** auf GitHub:
 
 | GitLab (Arbeitsort) | GitHub (Publikation) |
 |---|---|
-| `…/wg7/cosmo-suite` | `github.com/Helmholtz-UFZ/cosmo-suite` |
-| `…/wg7/cosmopolitan` | `github.com/Helmholtz-UFZ/cosmopolitan` |
-| `…/wg7/cosmonaut` | `github.com/Helmholtz-UFZ/cosmonaut` |
+| `…/wg7/cosmo-suite` | `github.com/Helmholtz-UFZ/**CosmoSuite**` |
+| `…/wg7/cosmopolitan` | `github.com/Helmholtz-UFZ/Cosmopolitan` |
+| `…/wg7/cosmonaut` | `github.com/Helmholtz-UFZ/Cosmonaut` |
+
+> ⚠️ **Der Framework-Repo-Name weicht ab.** Das Python-Paket heißt `cosmo-suite`
+> (Import `cosmo_suite`), das GitHub-Repo `CosmoSuite`. Der Pin lautet deshalb
+> `"cosmo-suite @ git+https://github.com/Helmholtz-UFZ/CosmoSuite@v0.4.0"` — Paketname
+> links, Reponame in der URL. Das funktioniert (`uv` liest den Namen aus der geholten
+> `pyproject.toml`), sieht aber nach einem Tippfehler aus. **Nicht „korrigieren".**
+>
+> Falls der Name doch angeglichen werden soll (`cosmo-suite`, wie Paket und GitLab-Repo):
+> **jetzt ist der einzige billige Moment.** Die Repos sind leer, kein Mirror konfiguriert,
+> kein Pin zeigt darauf, kein Zenodo-DOI hängt dran. Nach dem ersten Sync kostet es
+> Mirror-Neukonfiguration und macht jede schon geteilte URL ungültig.
 
 Damit ist auch die C2-Anforderung „permanent" besser gedeckt als mit einem persönlichen
 Repo: die URL hängt an der Institution, nicht an einer Person, und übersteht
@@ -33,7 +44,7 @@ GitLab, auf GitHub läuft nichts.
 **Tags sind zwingend, nicht optional** — an drei Stellen:
 
 1. Der Dependency-Pin lautet `@v0.4.0`. Ohne gespiegelte Tags schlägt
-   `git+https://github.com/Helmholtz-UFZ/cosmo-suite@v0.4.0` fehl, und damit ist der
+   `git+https://github.com/Helmholtz-UFZ/CosmoSuite@v0.4.0` fehl, und damit ist der
    Zweck der ganzen Umstellung verfehlt.
 2. C1 der Metadaten-Tabelle nennt Versionen — ein Reviewer will den Stand auschecken,
    den das Paper beschreibt.
@@ -66,14 +77,14 @@ betroffen — nur Git-Inhalte.
 
 ```bash
 # 1. Kamen die Tags mit? Das ist der Punkt, der den Pin bricht.
-git ls-remote --tags https://github.com/Helmholtz-UFZ/cosmo-suite | grep v0.4.0
+git ls-remote --tags https://github.com/Helmholtz-UFZ/CosmoSuite | grep v0.4.0
 
 # 2. Kamen NUR die gewollten Branches mit?
-git ls-remote --heads https://github.com/Helmholtz-UFZ/cosmo-suite
+git ls-remote --heads https://github.com/Helmholtz-UFZ/CosmoSuite
 
 # 3. Der Ernstfall: löst der Pin für einen Außenstehenden auf?
 uv pip install --system --dry-run \
-  "cosmo-suite @ git+https://github.com/Helmholtz-UFZ/cosmo-suite@v0.4.0"
+  "cosmo-suite @ git+https://github.com/Helmholtz-UFZ/CosmoSuite@v0.4.0"
 ```
 
 Punkt 1 ist der wichtigste: ob *„only protected branches"* die Tags mitnimmt, ist der
@@ -103,7 +114,7 @@ Plan als Gate festgehalten.
 | Org + Team | ✅ `Helmholtz-UFZ`, Team `cosmo-suite` unter MET |
 | Egress GitLab-Runner → github.com | ✅ beide Runner-Pools inkl. dind-Imagebuild |
 | Lizenz/Copyright symmetrisch | ✅ cosmo-suite, ✅ cosmopolitan, ⬜ cosmonaut |
-| Repos auf GitHub anlegen | ⬜ |
+| Repos auf GitHub anlegen | ✅ public, leer, Team = Admin |
 | Push-Mirror je Repo | ⬜ |
 | Pin auf GitHub-URL (beide Apps) | ⬜ Phase B |
 | Release + Zenodo-DOI | ⬜ Louis |
