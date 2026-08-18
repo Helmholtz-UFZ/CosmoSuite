@@ -1,0 +1,20 @@
+COSMO SUITE (framework) — Authors and Contributors
+
+Copyright holder
+----------------
+Helmholtz-Zentrum für Umweltforschung GmbH – UFZ
+
+The institution holds the rights because the software was written by employees in
+the course of their duties (§69b UrhG). The people who wrote it are credited below.
+
+Contributors
+------------
+John Anders <john-eric.anders@ufz.de>
+Louis Trinkle <louis-ferdinand.trinkle@ufz.de>
+
+Provenance
+----------
+The framework package was extracted from COSMOPOLITAN, so parts of it originate
+with that application's contributors — see the AUTHORS file in the COSMOPOLITAN
+repository. The reference domain in examples/csv_profiler/ was written for this
+repository.
