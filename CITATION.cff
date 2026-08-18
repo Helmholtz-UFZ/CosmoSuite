@@ -14,10 +14,12 @@ authors:
     given-names: John
     email: john-eric.anders@ufz.de
     affiliation: "Helmholtz Centre for Environmental Research – UFZ"
+    orcid: "https://orcid.org/0000-0002-3582-2157"
   - family-names: Trinkle
     given-names: Louis
     email: louis-ferdinand.trinkle@ufz.de
     affiliation: "Helmholtz Centre for Environmental Research – UFZ"
+    orcid: "https://orcid.org/0009-0003-0434-939X"
 version: "0.4.0"
 date-released: "2026-08-06"
 license: EUPL-1.2
