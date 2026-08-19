@@ -4,26 +4,25 @@
 
 The shared **Dash + Celery + PostgreSQL + MinIO** application framework at the core of
 the suite of sister apps [COSMOPOLITAN](https://github.com/Helmholtz-UFZ/Cosmopolitan) and
-[COSMONAUT](https://github.com/Helmholtz-UFZ/Cosmonaut). The framework owns the *workflow machinery* — the app
+[COSMONAUT](https://github.com/Helmholtz-UFZ/Cosmonaut). The framework owns the *workflow machinery*: the app
 shell, job lifecycle, Celery wiring, object storage, logging, error handling, and the
-infra/ops pages — while a **domain** provides *what flows through it* (its config model,
+infra/ops pages, while a **domain** provides *what flows through it* (its config model,
 computation, forms, and workflow pages).
 
 
 > **This is a read-only mirror.** Development happens at
-> [codebase.helmholtz.cloud/…/cosmo-suite](https://codebase.helmholtz.cloud/ufz/tb5-smm/met/wg7/cosmo-suite) — issues and merge
-> requests belong there. This copy exists so the software has a citable public
-> home (Zenodo DOI, SoftwareX metadata); anything pushed here is overwritten by
-> the next mirror sync.
+> [codebase.helmholtz.cloud/…/cosmo-suite](https://codebase.helmholtz.cloud/ufz/tb5-smm/met/wg7/cosmo-suite). Issues and merge requests
+> belong there. This copy exists so the software has a citable public home,
+> anything pushed here is overwritten by the next mirror sync.
 This repo is the framework's home. It also ships a reference domain,
-[`examples/csv_profiler/`](examples/csv_profiler/) — a CSV statistical profiler — that
+[`examples/csv_profiler/`](examples/csv_profiler/), a CSV statistical profiler, that
 depends on the framework and is the recommended starting point for a new app.
 
 ## Repo layout
 
 ```
 cosmo-suite/
-├── cosmo_suite/        # the published package (domain-free) — the wheel
+├── cosmo_suite/        # the published package (domain-free), the wheel
 ├── examples/csv_profiler/  # reference domain: depends on the framework, NOT in the wheel
 │   ├── csv_profiler/        # the example's Python package (app, ProfileConfig, pages, …)
 │   ├── docker/  docker-compose.yml  dev_up.sh  run_pytest.sh  env_*  # its runtime
@@ -49,17 +48,17 @@ allow-direct-references = true
 ```
 
 Auth uses `CI_JOB_TOKEN` / SSH; `uv` locks the resolved commit. A domain plugs itself
-into the framework by injecting four `Job` seams at startup — see the
+into the framework by injecting four `Job` seams at startup; see the
 [config-model contract](docs/conventions/config_model_contract.md).
 
 Two things bite every consumer, and neither announces itself as a framework problem:
 
 - **`[tool.hatch.metadata] allow-direct-references = true` is mandatory.** Without it
-  hatchling rejects the `git+https://` pin outright — building the app's own wheel
+  hatchling rejects the `git+https://` pin outright: building the app's own wheel
   fails, not the dependency install.
 - **`git` must be installed in the CI image.** `uv export` writes the dependency as a
   `git+https://` URL, so an image build without `git` breaks the next time `uv.lock`
-  changes — long after the change that caused it.
+  changes, long after the change that caused it.
 
 ### Start a new app
 
@@ -82,7 +81,7 @@ the local path (`[tool.uv.sources]` in the example's `pyproject.toml`), so
 1. Publish the framework: bump `version` in `pyproject.toml` and tag it on `main`.
 2. Bump the `cosmo-suite` pin in each consumer's `pyproject.toml` **and** `uv.lock`.
 
-**The pin bump must land on `main` and be tagged before any image build** — a scheduled
+**The pin bump must land on `main` and be tagged before any image build**: a scheduled
 `build-latest-tag` checks out the latest tag, so an untagged bump would silently ship
 the old framework.
 
@@ -98,7 +97,7 @@ The framework owns the **shell + infra/ops pages** and the job/task machinery; t
 | `config`, `db_manager`, `object_storage_manager`, `logger`, errors | `tasks/computation_tasks.py`, domain constants     |
 | pages: `logs`, `job_management`, `worker_management`             | pages: `home`, `input`, `results`, `job_submission`  |
 
-The framework package is kept **domain-free** — a CI gate fails if any CSV-profiler
+The framework package is kept **domain-free**: a CI gate fails if any CSV-profiler
 reference appears under `cosmo_suite/`.
 
 ## Running the example

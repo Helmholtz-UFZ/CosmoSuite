@@ -1,4 +1,4 @@
-COSMO SUITE (framework) — Authors and Contributors
+COSMO SUITE (framework): Authors and Contributors
 
 Copyright holder
 ----------------
@@ -15,6 +15,6 @@ Louis Trinkle <louis-ferdinand.trinkle@ufz.de>
 Provenance
 ----------
 The framework package was extracted from COSMOPOLITAN, so parts of it originate
-with that application's contributors — see the AUTHORS file in the COSMOPOLITAN
+with that application's contributors; see the AUTHORS file in the COSMOPOLITAN
 repository. The reference domain in examples/csv_profiler/ was written for this
 repository.
