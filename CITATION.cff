@@ -23,7 +23,8 @@ authors:
 version: "0.4.1"
 date-released: "2026-08-18"
 license: EUPL-1.2
-repository-code: "https://github.com/Helmholtz-UFZ/CosmoSuite"
+repository-code: "https://codebase.helmholtz.cloud/ufz/tb5-smm/met/wg7/cosmo-suite"
+url: "https://github.com/Helmholtz-UFZ/CosmoSuite"
 keywords:
   - "Software-as-a-Service"
   - "web application"

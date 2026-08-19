@@ -3,12 +3,18 @@
 # Cosmo Suite
 
 The shared **Dash + Celery + PostgreSQL + MinIO** application framework at the core of
-the suite of sister apps [COSMOPOLITAN](../cosmopolitan) and
-[COSMONAUT](../ufz-cosmonaut). The framework owns the *workflow machinery* — the app
+the suite of sister apps [COSMOPOLITAN](https://github.com/Helmholtz-UFZ/Cosmopolitan) and
+[COSMONAUT](https://github.com/Helmholtz-UFZ/Cosmonaut). The framework owns the *workflow machinery* — the app
 shell, job lifecycle, Celery wiring, object storage, logging, error handling, and the
 infra/ops pages — while a **domain** provides *what flows through it* (its config model,
 computation, forms, and workflow pages).
 
+
+> **This is a read-only mirror.** Development happens at
+> [codebase.helmholtz.cloud/…/cosmo-suite](https://codebase.helmholtz.cloud/ufz/tb5-smm/met/wg7/cosmo-suite) — issues and merge
+> requests belong there. This copy exists so the software has a citable public
+> home (Zenodo DOI, SoftwareX metadata); anything pushed here is overwritten by
+> the next mirror sync.
 This repo is the framework's home. It also ships a reference domain,
 [`examples/csv_profiler/`](examples/csv_profiler/) — a CSV statistical profiler — that
 depends on the framework and is the recommended starting point for a new app.
