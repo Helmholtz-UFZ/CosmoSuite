@@ -40,7 +40,7 @@ way `dash_form_factory` is already shared across the suite:
 ```toml
 [project]
 dependencies = [
-    "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.4.0",
+    "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.5.0",
 ]
 
 [tool.hatch.metadata]
@@ -120,3 +120,15 @@ uv sync                      # framework (editable, local path) + example deps
 See [`docs/conventions/`](docs/conventions/) and the design docs in
 [`docs/plan/`](docs/plan/) (`framework-generalization.md`,
 `cosmo-core-package-boundary.md`).
+
+Two of those are worth reading **before** wiring an app to the framework, because
+what they describe fails silently rather than loudly:
+
+- [What a consumer inherits when it imports a framework
+  page](docs/conventions/framework_page_imports.md) — importing a page registers
+  callbacks and claims HTML ids in your app's global registry. A collision aborts
+  the whole callback registry, and the symptom shows up on an unrelated page.
+- [Database schema, `Base`, and who owns the
+  DDL](docs/conventions/database_schema.md) — one declarative `Base` per process;
+  `JobTable` is an ORM mirror of the strict column intersection, not the
+  authoritative schema.

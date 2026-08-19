@@ -135,7 +135,7 @@ def _create_button_set(status, job_id):
     ]
 
 
-deletion_info_template = "The job will be deleted after {time_to_life} days."
+deletion_info_template = "The job will be deleted after {time_to_live} days."
 status_info_template = "Status:\n {status}"
 
 
@@ -232,7 +232,7 @@ def load_submission_content(job_id):
                 style={"white-space": "pre-line"},
             ),
             html.Div(
-                deletion_info_template.format(time_to_life=job.time_to_life()),
+                deletion_info_template.format(time_to_live=job.time_to_live()),
                 className="text-center fs-5 mb-2",
             ),
             dbc.Row(

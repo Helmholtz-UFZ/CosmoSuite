@@ -56,9 +56,74 @@ app = Dash(..., on_error=handle_error)
 Flow:
 1. Log error at DEBUG level
 2. Check if custom error - log at ERROR with context
-3. Extract error info for user message
-4. Display modal via `set_props()`
-5. Unhandled errors: log traceback, notify admin (TODO)
+3. Unhandled errors: log traceback, then call `on_unhandled` if one was given
+4. Extract error info for user message
+5. Display modal via `set_props()`
+
+---
+
+## Notifying someone: the `on_unhandled` hook
+
+```python
+def handle_error(error, *, on_unhandled: Callable[[Exception], None] | None = None) -> None
+```
+
+Both apps mail their maintainer when an unexpected error reaches the global
+handler. The framework does **not** send that mail. It calls a callable the app
+hands it:
+
+```python
+# In app.py
+from functools import partial
+from cosmo_suite.error_handling import handle_error
+
+from my_app.email_service import notify_maintainer
+
+app = Dash(..., on_error=partial(handle_error, on_unhandled=notify_maintainer))
+```
+
+Three properties of this seam are deliberate, and each one is load-bearing:
+
+- **`error_handling` never imports an email service.** That would pull mail
+  configuration into the framework's dependency set and close an import cycle
+  back into the app. The framework calls what it is given and knows nothing
+  about it.
+- **Keyword-only.** Existing `handle_error(e)` call sites and
+  `Dash(on_error=handle_error)` keep working untouched, so the addition is safe
+  for a consumer still pinned to an older tag.
+- **The hook fires only for unexpected errors** — the same set that gets a full
+  traceback logged. `JobNotFound`, `InvalidJobID` and `NotFound` are handled by
+  design and must not page anyone.
+
+A hook that raises is logged and swallowed. This is a deliberate deviation from
+the no-bare-`except` rule (`cosmo_suite/error_handling.py` carries the comment):
+an SMTP timeout must not take the user's error modal down with it.
+
+**Why this hook exists at all:** without it, an app that adopts the framework's
+`handle_error` switches its maintainer mails off *silently*. No import error, no
+failing test, just mails that stop arriving. See
+[framework page imports](framework_page_imports.md) for the other members of that
+family.
+
+---
+
+## Exception-name collisions with domain packages
+
+`FileValidationError` is defined by the framework **and** arrives in COSMOPOLITAN
+from `soil_moisture_prediction.input_file_parser`. Two classes, one name, in one
+process.
+
+**Decision (Slice 2):** the framework keeps defining
+`cosmo_suite.error_handling.FileValidationError`. It is in `error_responds_dict`
+and the upload callbacks catch it, so it stays where it is. Resolving the
+collision is app-side work and belongs in the consuming app's own plan; the app
+either catches both classes explicitly, or wraps the foreign exception into the
+framework's at the upload boundary where it is raised.
+
+**What must not happen:** shadowing one import with the other. The `except`
+clause in the upload callback keeps compiling and silently stops matching, so the
+validation error escapes to the global handler and the user is shown "Internal
+Error" instead of what is wrong with their file.
 
 ---
 

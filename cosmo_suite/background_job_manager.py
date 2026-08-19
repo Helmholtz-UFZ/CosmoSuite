@@ -40,6 +40,90 @@ class BackgroundJobManager:
             broker_connection_retry=True,
         )
 
+    def _send_task(
+        self,
+        task_name: str,
+        args: list,
+        queue: str,
+        *,
+        track_task_name: bool,
+        **opts,
+    ) -> tuple[str | None, bool]:
+        """Send a task with the framework's retry policy. Shared plumbing.
+
+        Args:
+            task_name: Dotted Celery task name (must match the registered name)
+            args: Positional args passed to the task
+            queue: Target queue name
+            track_task_name: Store the task name in the result backend
+            **opts: Passed through to ``Celery.send_task``; an explicit key
+                overrides the framework default for it
+
+        Returns:
+            tuple: (celery_task_id, failed_boolean)
+                   celery_task_id is None if submission failed
+        """
+        send_opts = {
+            "retry": True,
+            "retry_policy": {
+                "max_retries": 3,
+                "interval_start": 10,
+                "interval_step": 15,
+                "interval_max": 30,
+            },
+        } | opts
+
+        try:
+            result = self.app.send_task(task_name, args=args, queue=queue, **send_opts)
+            if track_task_name:
+                # Store task name in Redis for revoked task retrieval
+                self.app.backend.client.set(
+                    f"task_name:{result.id}",
+                    task_name,
+                    ex=86400,  # 24 hour TTL
+                )
+            log.info(f"Submitted task {task_name} with task_id={result.id}")
+            return result.id, False
+        except (OperationalError, CeleryError) as e:
+            log.error(f"Failed to submit task {task_name}: {e}")
+            return None, True
+
+    def submit_job(
+        self,
+        task_name: str,
+        job_id: str,
+        queue: str = "default",
+        *,
+        track_task_name: bool = False,
+        **opts,
+    ) -> tuple[str | None, bool]:
+        """Submit a job task by id, without ever touching a job object.
+
+        The manager takes a plain ``job_id``, never a job: the apps keep the id
+        in different places (``job.job_id`` vs ``job.model.job_id``), so their
+        thin wrappers pull it out and pass it here. That is what keeps this
+        method usable by an app whose job class is not the framework's.
+
+        Args:
+            task_name: Dotted Celery task name (must match the registered name)
+            job_id: The job id, passed to the task as its only positional arg
+            queue: Target queue name
+            track_task_name: Store ``task_name`` under ``task_name:<task_id>``
+                in the result backend. The worker-management page reads that key
+                when a revoked task no longer reports its own name; without it
+                such a task shows up as "Unknown". Off by default because it
+                costs a backend write per submission.
+            **opts: Passed through to ``Celery.send_task`` (``countdown``,
+                ``eta``, …); an explicit key overrides the framework default
+
+        Returns:
+            tuple: (celery_task_id, failed_boolean)
+                   celery_task_id is None if submission failed
+        """
+        return self._send_task(
+            task_name, [job_id], queue, track_task_name=track_task_name, **opts
+        )
+
     def submit_named_job(
         self,
         task_name: str,
@@ -48,8 +132,9 @@ class BackgroundJobManager:
     ) -> tuple[str | None, bool]:
         """Submit a named task to a Celery queue with retry + revoke bookkeeping.
 
-        Generic submission plumbing: domains mount thin wrappers (e.g.
-        ``submit_computation_job``) that call this with their task name/queue.
+        Generic submission plumbing for a task with an arbitrary argument list.
+        A task that takes a job id is better served by ``submit_job``, which is
+        the seam an app can adopt with its own job class.
 
         Args:
             task_name: Dotted Celery task name (must match the registered name)
@@ -60,30 +145,7 @@ class BackgroundJobManager:
             tuple: (celery_task_id, failed_boolean)
                    celery_task_id is None if submission failed
         """
-        try:
-            result = self.app.send_task(
-                task_name,
-                args=args or [],
-                queue=queue,
-                retry=True,
-                retry_policy={
-                    "max_retries": 3,
-                    "interval_start": 10,
-                    "interval_step": 15,
-                    "interval_max": 30,
-                },
-            )
-            # Store task name in Redis for revoked task retrieval
-            self.app.backend.client.set(
-                f"task_name:{result.id}",
-                task_name,
-                ex=86400,  # 24 hour TTL
-            )
-            log.info(f"Submitted task {task_name} with task_id={result.id}")
-            return result.id, False
-        except (OperationalError, CeleryError) as e:
-            log.error(f"Failed to submit task {task_name}: {e}")
-            return None, True
+        return self._send_task(task_name, args or [], queue, track_task_name=True)
 
     def get_job_status(self, task_id: str) -> dict:
         """Get status of a Celery task.

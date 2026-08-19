@@ -32,7 +32,25 @@ log = logging.getLogger(__name__)
 
 
 class Base(DeclarativeBase):
-    """Base class for declarative base."""
+    """The framework's declarative registry — the one every table belongs on.
+
+    This is a documented export point, not an internal detail. An app declares
+    its own tables on this ``Base``::
+
+        from cosmo_suite.db_manager import Base
+
+        class RouteTable(Base):
+            __tablename__ = "routes"
+            ...
+
+    Why it matters: a second ``DeclarativeBase`` in the same process means a
+    second mapper registry and, with it, a second engine and connection pool
+    against the same database. Both apps run exactly that today — their own
+    ``Base`` next to this one, each mapping ``logs`` and ``jobs`` — and it works
+    only because ``DbManager`` here is confined to the framework pages' log
+    queries. Sharing this ``Base`` and this engine is what Slice 2 unwinds
+    app-side. See docs/conventions/database_schema.md.
+    """
 
     pass
 
@@ -330,7 +348,29 @@ class DbManager:
 
 
 class JobTable(Base):
-    """Represents the 'jobs' table in the database."""
+    """ORM mirror of the strict intersection of the apps' ``jobs`` tables.
+
+    **Not the authoritative schema.** The DDL stays per app in its own
+    ``init.sql``; this class only describes the columns every app is known to
+    have, so that framework code (``Job``, the job-management page,
+    ``DbManager``) can read and write a job row without knowing the app.
+
+    The intersection, measured across both apps and the reference domain on
+    2026-08-19 and frozen for Slice 2:
+
+        job_id, start_date, input_data, submitted, notified_end, logs,
+        status, version
+
+    App-specific columns stay app-side: COSMOPOLITAN's ``prepared_input``, and
+    the two columns its ``init.sql`` carries without an ORM mapping (``email``,
+    ``celery_task_id``) that nothing reads or writes. Extra columns in the
+    physical table are harmless to this mapper; a *missing* one is not, which is
+    what makes the intersection the safe cut.
+
+    Adding a column here is a framework-wide schema commitment: every consuming
+    app's ``init.sql`` has to grow it first. See
+    docs/conventions/database_schema.md.
+    """
 
     __tablename__ = "jobs"
 
