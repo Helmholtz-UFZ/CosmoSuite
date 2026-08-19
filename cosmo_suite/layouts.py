@@ -206,7 +206,8 @@ def landing_page_layout_column(
 ):
     """Create a landing page layout for a given job ID.
 
-    ``wrapper_class`` is passed through to page_container_column_layout.
+    ``wrapper_class`` is passed through to page_container_column_layout; leaving
+    it at ``None`` falls back to ``default_wrapper_class``.
     """
     header = create_header(header_title, "Loading ...", bg_color="bg-secondary")
 
@@ -230,6 +231,21 @@ def landing_page_layout_column(
     return page_container_column_layout(content, wrapper_class=wrapper_class)
 
 
+# Seam: the wrapper class every page container falls back to. An app sets it
+# BEFORE importing the framework pages — `pages/job_management.py` builds its
+# `layout` at import time, so a value set afterwards would miss that page and
+# only that page. Same rule as the `Job` class attributes: configure the seam,
+# then import. See docs/conventions/framework_page_imports.md.
+#
+#     import cosmo_suite.layouts
+#     cosmo_suite.layouts.default_wrapper_class = "cosmonaut-page"
+#     import cosmo_suite.pages.job_management  # noqa: E402
+#
+# Assign the module attribute; a `from … import default_wrapper_class` binds a
+# copy of the value and configures nothing.
+default_wrapper_class = None
+
+
 def page_container_column_layout(
     content, main_content_id="main-content-container", wrapper_class=None
 ):
@@ -243,8 +259,17 @@ def page_container_column_layout(
             beside them — needs a marker class it can select on to give these
             pages the full width. Without it the only hook is
             ``#main-content-container``, which forces the app to key its CSS on
-            a framework-internal id. Omit it and the DOM is unchanged.
+            a framework-internal id.
+
+            ``None`` means "use ``default_wrapper_class``", which is itself
+            ``None`` unless an app sets it — so by default the DOM is unchanged.
+            The fallback lives here rather than in each caller because the three
+            framework pages build their own layout and call this function
+            themselves: a consumer has no call site to pass an argument at.
     """
+    if wrapper_class is None:
+        wrapper_class = default_wrapper_class
+
     class_names_content = "col-md-11 col-lg-10 col-xl-9 bg-white border border-dark rounded p-0 mb-4 mt-2 d-flex flex-column"  # noqa
     page = dbc.Row(
         dbc.Col(

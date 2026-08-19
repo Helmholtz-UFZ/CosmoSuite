@@ -3,6 +3,7 @@
 import json
 import logging
 import traceback
+from collections.abc import Callable
 
 import dash
 import dash_bootstrap_components as dbc
@@ -169,8 +170,28 @@ def _truncate_data(data):
         return data
 
 
-def handle_error(error):
-    """Handle the error and return a formatted message."""
+def handle_error(
+    error, *, on_unhandled: Callable[[Exception], None] | None = None
+) -> None:
+    """Handle the error, show it in the modal, and optionally report it.
+
+    Args:
+        error: The exception Dash caught.
+        on_unhandled: Called with the exception for errors outside the expected
+            set — the same ones that get a full traceback logged. Both apps mail
+            their maintainer from here.
+
+            Keyword-only on purpose: ``handle_error(e)`` and
+            ``Dash(on_error=handle_error)`` keep working unchanged, which is
+            what makes this addition safe for a consumer still pinned to an
+            older tag. An app wires its hook with a partial::
+
+                Dash(..., on_error=partial(handle_error, on_unhandled=notify))
+
+            The framework never imports an email service itself: that would pull
+            mail configuration into the framework's dependencies and close an
+            import cycle back into the app. It only calls what it is handed.
+    """
     log.debug(f"Error: {error}")
 
     if not isinstance(
@@ -188,14 +209,26 @@ def handle_error(error):
             f"Traceback info: {traceback.format_exc()}\n\n"
             f"Input info: {json.dumps(truncated_triggered)}"
         )
+        if on_unhandled is not None:
+            # Convention deviation (CLAUDE.md: no bare `except Exception`). The
+            # hook is app code, typically an SMTP send, and it must not be able
+            # to take the error modal down with it: a notification failing is no
+            # reason to hide the error it was reporting from the user.
+            try:
+                on_unhandled(error)
+            except Exception as hook_error:
+                log.error(
+                    f"on_unhandled hook failed: {hook_error}",
+                    exc_info=True,
+                )
 
-    # dispatch lookup: unknown exception types fall back to the generic Exception entry
-    error_title = error_responds_dict.get(type(error), error_responds_dict[Exception])[
-        0
-    ]
-    error_message = error_responds_dict.get(
-        type(error), error_responds_dict[Exception]
-    )[1]
+    # dispatch lookup by exact type: an exception type that is not mapped falls
+    # back to the generic Exception entry. A subclass of a mapped type does not
+    # inherit its entry — this is a lookup, not an isinstance walk.
+    error_type = type(error)
+    if error_type not in error_responds_dict:
+        error_type = Exception
+    error_title, error_message = error_responds_dict[error_type]
 
     try:
         error_message = error_message.format(job_id=error.job_id)

@@ -1,6 +1,28 @@
 # Testing
 
-All tests live in `test/` and run against real services via Docker.
+## Two suites, two commands
+
+| Suite | Where | How | Services |
+|---|---|---|---|
+| Framework | `test/` at the repo root | `uv run pytest test/` | none |
+| Example (integration + e2e) | `examples/csv_profiler/test/` | `./run_pytest.sh` | postgres, MinIO, redis, a Celery worker |
+
+Everything below is about the **example** suite unless it says otherwise: it is
+the one with services, fixtures and Playwright, and the one that actually
+exercises the framework end to end.
+
+The framework suite covers what can be checked without a running stack — static
+HTML-id enforcement, and the seams the apps depend on (`on_unhandled`, the
+`BaseJob` contract, the `serve_files` job class, the layout wrapper). It has no
+`run_pytest.sh` and needs none.
+
+**It does have a `test/conftest.py`, and that file is load-bearing.**
+`cosmo_suite.config` reads its environment at import time and raises for anything
+missing, so a test module importing the framework needs those variables to exist
+*before* collection. conftest sets placeholder values with `os.environ.setdefault`
+— an already-exported variable still wins. Without it the suite cannot even be
+collected in CI, where there is no `.env` (it is gitignored). A new framework
+env var therefore has to be added there too.
 
 ## Critical Rules for Running Tests
 

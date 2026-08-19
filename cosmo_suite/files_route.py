@@ -34,20 +34,31 @@ def create_download_button(job_id, class_name="w-100 mt-2"):
     )
 
 
-def serve_files(app):
-    """Serve static files from a directory."""
+def serve_files(app, *, job_class=Job):
+    """Serve static files from a directory.
+
+    Args:
+        app: The Dash app whose Flask server carries the routes.
+        job_class: The job class the routes construct to resolve and validate a
+            job id. Defaults to the framework's concrete ``Job``; an app with
+            its own job class passes it here instead of keeping a copy of this
+            module. Keyword-only with a behaviour-preserving default, so
+            existing ``serve_files(app)`` calls are unaffected.
+
+            Beyond the ``BaseJob`` contract these routes need two things from
+            the class: it must be constructible as ``job_class(job_id)``,
+            raising for an unknown or malformed id, and instances must expose
+            ``working_dir``.
+    """
 
     @app.server.route("/pictures/<job_id>/<path:filename>")
     def serve_file(job_id, filename):
         """Serve pictures."""
         log.debug(f"Serve picture {filename} for {job_id}")
         # Assure that the job exists and all files are ready
-        Job(job_id)
+        job = job_class(job_id)
 
-        # Dont use job.working_dir as from send_from_directory: The directory that
-        # ``path`` must be located under, relative to the current application's root
-        # path
-        response = send_from_directory(f"work_dir/{job_id}", filename)
+        response = send_from_directory(job.working_dir, filename)
 
         # Add cache control headers to prevent browser caching
         response.headers["Cache-Control"] = (
@@ -62,12 +73,13 @@ def serve_files(app):
     def download_work_dir(job_id):
         """Download the entire work directory as a zip file.
 
-        Security: job_id is validated via Job() which calls validate_job_id()
-        (format check) and queries the database (existence check). The working
-        directory path is taken from the validated job object, never from user input.
+        Security: job_id is validated via job_class() which calls
+        validate_job_id() (format check) and queries the database (existence
+        check). The working directory path is taken from the validated job
+        object, never from user input.
         """
         log.info(f"Download work dir for {job_id}")
-        job = Job(job_id)
+        job = job_class(job_id)
 
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:

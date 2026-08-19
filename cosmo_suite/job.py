@@ -9,6 +9,7 @@ import logging
 import os
 import random
 import shutil
+import warnings
 from collections.abc import Callable
 from datetime import date
 from importlib.metadata import PackageNotFoundError, version
@@ -17,6 +18,7 @@ from typing import Literal
 import coolname
 from werkzeug.utils import secure_filename
 
+from cosmo_suite.base_job import BaseJob
 from cosmo_suite.config import JOB_WORK_DIR_TEMPLATE
 from cosmo_suite.constants import (
     DAYS_DELETE_NOT_SUBMITTED,
@@ -63,7 +65,7 @@ def find_unique_job_id() -> str:
     return job_id
 
 
-class Job:
+class Job(BaseJob):
     """This class represents a job submission by the user.
 
     It handles input from a web application, manages job lifecycle,
@@ -83,7 +85,6 @@ class Job:
     # that produced the result.
     app_version: str = FRAMEWORK_VERSION
 
-    job_id: str
     model: UploadJobConfig
     start_date: date
     submitted: bool
@@ -129,6 +130,19 @@ class Job:
     def __str__(self):
         """Represent class as string."""
         return self.job_id
+
+    # BaseJob declares `job_id` as an abstract property, so a bare annotation
+    # would leave this class abstract and uninstantiable. The setter keeps every
+    # existing `self.job_id = ...` assignment working unchanged.
+    @property
+    def job_id(self) -> str:
+        """Return the job's unique id."""
+        return self._job_id
+
+    @job_id.setter
+    def job_id(self, value: str) -> None:
+        """Store the job's unique id."""
+        self._job_id = value
 
     def load(self, overwrite=False):
         """Load job from database and store files in working dir.
@@ -349,13 +363,29 @@ class Job:
 
         self.save_to_db()
 
-    def time_to_life(self):
+    def time_to_live(self):
         """Return the number of days after which this job will be deleted."""
         days_passed = (date.today() - self.start_date).days
         if self.submitted:
             return DAYS_DELETE_SUBMITTED - days_passed
         else:
             return DAYS_DELETE_NOT_SUBMITTED - days_passed
+
+    def time_to_life(self):
+        """Return the number of days after which this job will be deleted.
+
+        Deprecated alias for ``time_to_live`` — the old name is a typo. It stays
+        because COSMOPOLITAN calls it from six places; renaming the method
+        outright would have been a breaking change for a spelling fix. Delete it
+        once no consumer calls it any more.
+        """
+        warnings.warn(
+            "Job.time_to_life() is a misspelling and will be removed; "
+            "use Job.time_to_live().",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.time_to_live()
 
     def status_color(self):
         """Return the color of the job status."""
