@@ -80,6 +80,22 @@ class FileValidationError(Exception):
     ...
 
 
+class JobTableNotConfigured(Exception):
+    """Raised when a job method runs before ``DbManager.job_table`` is set.
+
+    The assignment must be made on ``DbManager`` itself, not on a subclass —
+    see docs/conventions/database_schema.md.
+    """
+
+    def __init__(self):
+        """Format the error message with a pointer to the fix."""
+        super().__init__(
+            "DbManager.job_table is not set — the application must assign its "
+            "own JobColumns subclass (via `DbManager.job_table = <YourJobTable>`) "
+            "on DbManager itself before any job method runs."
+        )
+
+
 database_error_title = "Database Connection Error"
 database_error_message = "Unfortunately, it is not possible to connect to the job database. Please try again later."  # noqa
 error_responds_dict = {

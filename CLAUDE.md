@@ -116,7 +116,7 @@ For specific implementation details, see:
 - [Environment Variables](docs/conventions/environment_variables.md) - Env files, config loading
 - [Config Model Contract](docs/conventions/config_model_contract.md) - The Job config-model seam
 - [Framework Page Imports](docs/conventions/framework_page_imports.md) - What a consumer inherits by importing a page, and how it fails silently
-- [Database Schema](docs/conventions/database_schema.md) - Shared `Base`, the `JobTable` intersection, DDL ownership
+- [Database Schema](docs/conventions/database_schema.md) - Shared `Base`, the `JobColumns` intersection mixin, DDL ownership
 
 **Important** read the convention before you make any codebase exploration or answering.
 Never sacrfice speed for accuracy.

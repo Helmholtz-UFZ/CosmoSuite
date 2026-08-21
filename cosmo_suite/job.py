@@ -25,7 +25,7 @@ from cosmo_suite.constants import (
     DAYS_DELETE_SUBMITTED,
     LOG_FILE_NAME,
 )
-from cosmo_suite.db_manager import DbManager, JobTable
+from cosmo_suite.db_manager import DbManager
 from cosmo_suite.error_handling import (
     InvalidJobID,
     JobExists,
@@ -311,7 +311,7 @@ class Job(BaseJob):
     def save_to_db(self):
         """Save the job attributes to the database."""
         log.debug(f"Save job {self.job_id} to database")
-        column_names = JobTable.__table__.columns.keys()
+        column_names = DbManager._job_table().__table__.columns.keys()
         data_to_insert = {name: self._get_column_data(name) for name in column_names}
         for key, value in data_to_insert.items():
             if key == "input_data":

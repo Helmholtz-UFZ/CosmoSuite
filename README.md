@@ -130,5 +130,5 @@ what they describe fails silently rather than loudly:
   the whole callback registry, and the symptom shows up on an unrelated page.
 - [Database schema, `Base`, and who owns the
   DDL](docs/conventions/database_schema.md) — one declarative `Base` per process;
-  `JobTable` is an ORM mirror of the strict column intersection, not the
-  authoritative schema.
+  `JobColumns` supplies the strict column intersection as a mixin, each app
+  declares its own concrete `jobs` table from it, not the framework.

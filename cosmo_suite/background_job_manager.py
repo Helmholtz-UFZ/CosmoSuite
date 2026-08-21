@@ -94,7 +94,7 @@ class BackgroundJobManager:
         job_id: str,
         queue: str = "default",
         *,
-        track_task_name: bool = False,
+        track_task_name: bool = True,
         **opts,
     ) -> tuple[str | None, bool]:
         """Submit a job task by id, without ever touching a job object.
@@ -111,8 +111,11 @@ class BackgroundJobManager:
             track_task_name: Store ``task_name`` under ``task_name:<task_id>``
                 in the result backend. The worker-management page reads that key
                 when a revoked task no longer reports its own name; without it
-                such a task shows up as "Unknown". Off by default because it
-                costs a backend write per submission.
+                such a task shows up as "Unknown". On by default, matching
+                ``submit_named_job``: both apps rely on this to keep a revoked
+                task from showing up as "Unknown", and that outweighs the extra
+                backend write per submission. Pass ``False`` explicitly to skip
+                the write.
             **opts: Passed through to ``Celery.send_task`` (``countdown``,
                 ``eta``, …); an explicit key overrides the framework default
 

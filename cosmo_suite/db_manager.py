@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import (
-    JSON,
     Boolean,
     Column,
     Date,
@@ -26,7 +25,7 @@ from cosmo_suite.config import (
     POSTGRES_PORT,
     POSTGRES_USER,
 )
-from cosmo_suite.error_handling import JobNotFound
+from cosmo_suite.error_handling import JobNotFound, JobTableNotConfigured
 
 log = logging.getLogger(__name__)
 
@@ -100,10 +99,26 @@ class SessionScope:
 
 
 class DbManager:
-    """Class for interacting with the postgres database."""
+    """Class for interacting with the postgres database.
+
+    ``job_table`` is the app's seam for the job methods below: assign the app's
+    concrete ``JobColumns`` subclass to it before any of them run. It must be
+    set on ``DbManager`` itself, not on a subclass — framework pages call
+    ``DbManager.list_jobs()`` directly, so ``cls`` there is always the base
+    class, and a subclass assignment configures only the app's own call sites.
+    See docs/conventions/database_schema.md.
+    """
 
     _engine = None
     _Session = None
+    job_table = None
+
+    @classmethod
+    def _job_table(cls):
+        """Return the app's job table class, or fail loudly if unset."""
+        if cls.job_table is None:
+            raise JobTableNotConfigured()
+        return cls.job_table
 
     @classmethod
     def _get_session(cls):
@@ -223,8 +238,9 @@ class DbManager:
     def check_existence(cls, job_id):
         """Check if a job with the given job ID exists in the database."""
         log.debug(f"Check existence of job: {job_id}")
+        job_table = cls._job_table()
         with cls.session_scope() as session:
-            job_row = session.query(JobTable.job_id).filter_by(job_id=job_id).first()
+            job_row = session.query(job_table.job_id).filter_by(job_id=job_id).first()
         return job_row is not None
 
     @classmethod
@@ -233,9 +249,10 @@ class DbManager:
         log.debug(
             f"Add entry to database: {data_to_insert['job_id']}",
         )
+        job_table = cls._job_table()
         with cls.session_scope() as session:
             job_row = (
-                session.query(JobTable.job_id)
+                session.query(job_table.job_id)
                 .filter_by(job_id=data_to_insert["job_id"])
                 .first()
             )
@@ -243,7 +260,7 @@ class DbManager:
             if job_row is not None:
                 log.debug("Update entry.")
                 job = (
-                    session.query(JobTable)
+                    session.query(job_table)
                     .filter_by(job_id=data_to_insert["job_id"])
                     .first()
                 )
@@ -251,16 +268,17 @@ class DbManager:
                     setattr(job, column_name, column_value)
             else:
                 log.debug("New entry.")
-                job_row = JobTable(**data_to_insert)
+                job_row = job_table(**data_to_insert)
                 session.add(job_row)
 
     @classmethod
     def update_column(cls, job_id, column_dic):
-        """Update specific columns in the 'JobTable' for a given job ID."""
+        """Update specific columns of the job table for a given job ID."""
         log.debug(f"Update columns for job: {job_id}")
 
+        job_table = cls._job_table()
         with cls.session_scope() as session:
-            job = session.query(JobTable).filter_by(job_id=job_id).first()
+            job = session.query(job_table).filter_by(job_id=job_id).first()
             if job is None:
                 raise JobNotFound(job_id)
 
@@ -269,7 +287,7 @@ class DbManager:
 
     @classmethod
     def set_submitted(cls, job_id):
-        """Update the 'submitted' column in the 'JobTable' for a given job ID.
+        """Update the 'submitted' column of the job table for a given job ID.
 
         The method works as well as a lock so that the job is not submitted twice.
 
@@ -279,9 +297,10 @@ class DbManager:
         """
         log.debug(f"Set submitted for job: {job_id}")
 
+        job_table = cls._job_table()
         with cls.session_scope() as session:
             job = (
-                session.query(JobTable)
+                session.query(job_table)
                 .filter_by(job_id=job_id)
                 .with_for_update()
                 .first()
@@ -300,15 +319,16 @@ class DbManager:
         """Retrieve all columns of a specific job entry based on its job ID."""
         log.debug(f"Get columns for job: {job_id}")
 
+        job_table = cls._job_table()
         with cls.session_scope() as session:
-            job_row = session.query(JobTable).filter_by(job_id=job_id).first()
+            job_row = session.query(job_table).filter_by(job_id=job_id).first()
 
             if job_row is None:
                 raise JobNotFound(job_id)
 
             job_columns = {
                 column.name: getattr(job_row, column.name)
-                for column in JobTable.__table__.columns
+                for column in job_table.__table__.columns
             }
 
         return job_columns
@@ -317,8 +337,9 @@ class DbManager:
     def delete_job(cls, job_id):
         """Delete a job entry from the database based on its job ID."""
         log.debug(f"Delete job: {job_id}")
+        job_table = cls._job_table()
         with cls.session_scope() as session:
-            job = session.query(JobTable).filter_by(job_id=job_id).first()
+            job = session.query(job_table).filter_by(job_id=job_id).first()
 
             if job is None:
                 raise JobNotFound(job_id)
@@ -330,58 +351,46 @@ class DbManager:
         """List all jobs in the database with their submission date and status."""
         log.debug("List all jobs.")
 
+        job_table = cls._job_table()
         with cls.session_scope() as session:
-            job_rows = session.query(JobTable).all()
+            job_rows = session.query(job_table).all()
 
             job_info = {}
             for job_row in job_rows:
                 job_info[job_row.job_id] = {
-                    "start_date": job_row.start_date,
-                    "input_data": job_row.input_data,
-                    "status": job_row.status,
-                    "submitted": job_row.submitted,
-                    "notified_end": job_row.notified_end,
-                    "logs": job_row.logs,
-                    "version": job_row.version,
+                    column.name: getattr(job_row, column.name)
+                    for column in job_table.__table__.columns
                 }
         return job_info
 
 
-class JobTable(Base):
-    """ORM mirror of the strict intersection of the apps' ``jobs`` tables.
+class JobColumns:
+    """The six columns every app's ``jobs`` table is measured to carry.
 
-    **Not the authoritative schema.** The DDL stays per app in its own
-    ``init.sql``; this class only describes the columns every app is known to
-    have, so that framework code (``Job``, the job-management page,
-    ``DbManager``) can read and write a job row without knowing the app.
+    Not mapped and not a table: an app declares its own concrete class from
+    this mixin, on the framework ``Base``, alongside whatever extra columns its
+    own ``jobs`` table has::
 
-    The intersection, measured across both apps and the reference domain on
-    2026-08-19 and frozen for Slice 2:
+        class JobTable(JobColumns, Base):
+            __tablename__ = "jobs"
 
-        job_id, start_date, input_data, submitted, notified_end, logs,
-        status, version
+            input_data = Column(JSON)
+            logs = Column(String)
 
-    App-specific columns stay app-side: COSMOPOLITAN's ``prepared_input``, and
-    the two columns its ``init.sql`` carries without an ORM mapping (``email``,
-    ``celery_task_id``) that nothing reads or writes. Extra columns in the
-    physical table are harmless to this mapper; a *missing* one is not, which is
-    what makes the intersection the safe cut.
+        DbManager.job_table = JobTable
 
-    Adding a column here is a framework-wide schema commitment: every consuming
-    app's ``init.sql`` has to grow it first. See
+    The intersection, measured across COSMOPOLITAN, COSMONAUT and csv_profiler
+    on 2026-08-21: cosmonaut has neither ``input_data`` nor ``logs``, so those
+    two stay app-side rather than in this mixin. See
     docs/conventions/database_schema.md.
     """
 
-    __tablename__ = "jobs"
-
     job_id = Column(String, primary_key=True)
-    start_date = Column("start_date", Date)
-    input_data = Column("input_data", JSON)
-    submitted = Column("submitted", Boolean)
-    notified_end = Column("notified_end", Boolean)
-    logs = Column("logs", String)
-    status = Column("status", String)
-    version = Column("version", String)
+    start_date = Column(Date)
+    submitted = Column(Boolean)
+    notified_end = Column(Boolean)
+    status = Column(String)
+    version = Column(String)
 
 
 class LogTable(Base):

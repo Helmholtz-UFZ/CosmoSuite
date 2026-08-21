@@ -31,6 +31,13 @@ from cosmo_suite.config import (
 )
 from cosmo_suite.db_manager import DbManager
 
+from csv_profiler.db_manager import JobTable
+
+# Every test module in this suite imports DbManager directly (test_db_manager.py)
+# or transitively through cosmo_suite.job (test_e2e.py's dash_app fixture), so
+# this has to be set once here, before collection, same as the seams in app.py.
+DbManager.job_table = JobTable
+
 
 def create_logger():
     """Create a logger with debug level."""

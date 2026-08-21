@@ -10,6 +10,7 @@ process, and exposes ``celery`` for:
 from importlib.metadata import version
 
 from cosmo_suite.celery_app import app
+from cosmo_suite.db_manager import DbManager
 from cosmo_suite.job import Job
 
 from csv_profiler.background_job_manager import (
@@ -17,6 +18,7 @@ from csv_profiler.background_job_manager import (
     submit_computation_job,
 )
 from csv_profiler.computation_module import validate_csv
+from csv_profiler.db_manager import JobTable
 from csv_profiler.pydantic_models import ProfileConfig
 from csv_profiler.tasks.computation_tasks import start_computation_task
 
@@ -25,6 +27,7 @@ Job.config_model = ProfileConfig
 Job.file_validator = staticmethod(validate_csv)
 Job.submit_handler = staticmethod(submit_computation_job)
 Job.app_version = version("csv-profiler")
+DbManager.job_table = JobTable
 
 # Register the domain computation task and route it to the computation queue.
 app.task(bind=True, name=NAME_COMPUTATION_TASK)(start_computation_task)

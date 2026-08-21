@@ -17,6 +17,7 @@ from dash import Dash
 
 from cosmo_suite.background_job_manager import background_job_manager
 from cosmo_suite.config import DEBUG, PORT
+from cosmo_suite.db_manager import DbManager
 from cosmo_suite.error_handling import handle_error
 from cosmo_suite.files_route import serve_files
 from cosmo_suite.job import Job
@@ -26,6 +27,7 @@ from cosmo_suite.object_storage_manager import create_bucket, setup_remote
 
 from csv_profiler.background_job_manager import submit_computation_job
 from csv_profiler.computation_module import validate_csv
+from csv_profiler.db_manager import JobTable
 from csv_profiler.pydantic_models import ProfileConfig
 
 # Wire the framework Job seams to the CSV domain BEFORE any Job is constructed
@@ -34,6 +36,10 @@ Job.config_model = ProfileConfig
 Job.file_validator = staticmethod(validate_csv)
 Job.submit_handler = staticmethod(submit_computation_job)
 Job.app_version = version("csv-profiler")
+
+# Same rule as the Job seams above: DbManager.job_table must be set on
+# DbManager itself, before any framework page or Job method runs.
+DbManager.job_table = JobTable
 
 # Configure logging BEFORE Dash() and any getLogger() calls.
 logging.config.dictConfig(get_logger_config_web(DEBUG))

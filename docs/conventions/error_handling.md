@@ -32,6 +32,8 @@ All error handling is centralized in `src/error_handling.py`.
 
 - `JobNotFound(job_id)` - Job not in database
 - `WrongCeleryTaskId(task_id)` - Invalid Celery task ID
+- `JobTableNotConfigured()` - `DbManager.job_table` was never assigned; see
+  [database schema](database_schema.md#jobcolumns-the-framework-supplies-columns-the-app-supplies-the-table)
 
 ---
 
