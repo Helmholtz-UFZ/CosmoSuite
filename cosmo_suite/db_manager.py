@@ -379,9 +379,9 @@ class JobColumns:
 
         DbManager.job_table = JobTable
 
-    The intersection, measured across COSMOPOLITAN, COSMONAUT and csv_profiler
-    on 2026-08-21: cosmonaut has neither ``input_data`` nor ``logs``, so those
-    two stay app-side rather than in this mixin. See
+    The intersection, measured across COSMOPOLITAN, COSMONAUT and the reference
+    domain on 2026-08-21: COSMONAUT has neither ``input_data`` nor ``logs``, so
+    those two stay app-side rather than in this mixin. See
     docs/conventions/database_schema.md.
     """
 
