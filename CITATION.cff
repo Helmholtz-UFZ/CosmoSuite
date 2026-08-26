@@ -23,6 +23,10 @@ authors:
 version: "0.7.0"
 date-released: "2026-08-26"
 license: EUPL-1.2
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.21996475
+    description: "Concept DOI, resolves to the latest version"
 repository-code: "https://codebase.helmholtz.cloud/ufz/tb5-smm/met/wg7/cosmo-suite"
 url: "https://github.com/Helmholtz-UFZ/CosmoSuite"
 keywords:
