@@ -1,6 +1,6 @@
 [project]
 name = "cosmo-suite"
-version = "0.6.0"
+version = "0.6.2"
 description = "Shared Dash + Celery + PostgreSQL + MinIO application framework for the Cosmo Suite"
 authors = [{ name = "John Anders", email = "john-eric.anders@ufz.de" }]
 readme = "README.md"
