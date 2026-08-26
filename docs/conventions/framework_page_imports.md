@@ -23,10 +23,12 @@ no failing test, and a symptom that surfaces somewhere else entirely.**
 
 | Importing … | also imports | which registers |
 | --- | --- | --- |
-| any framework page | `cosmo_suite.layouts` | the navbar-collapse callback on `NAVBAR_TOGGLER_BUTTON_SHARED_ID` / `NAVBAR_COLLAPSE_DIV_SHARED_ID` |
+| any framework page | `cosmo_suite.layouts` | nothing since v0.7.0 — the navbar-collapse callback used to be here, see [silent failure 4](#4-an-import-registers-a-callback-and-a-consumer-never-asked) |
 | `pages.job_management` | `cosmo_suite.job`, `cosmo_suite.db_manager`, `cosmo_suite.tasks.maintenance_tasks` | its own page + three callbacks |
 | `pages.worker_management` | `cosmo_suite.background_job_manager` | its own page + eleven callbacks, one of them clientside |
-| `layouts.app_layout(with_reset=True)` | — | the two job-reset callbacks |
+| `layouts.app_layout()` | — | the navbar-collapse callback on `NAVBAR_TOGGLER_BUTTON_SHARED_ID` / `NAVBAR_COLLAPSE_DIV_SHARED_ID` — it mounts that navbar |
+| `layouts.app_layout(with_reset=True)` | — | the above **plus** the two job-reset callbacks |
+| `layouts.register_navbar_callbacks()` | — | the navbar-collapse callback, for an app that mounts the shared id in a navbar of its own |
 
 Two consequences follow from "at import time":
 
@@ -41,7 +43,7 @@ Two consequences follow from "at import time":
 
 ---
 
-## The three silent failures
+## The four silent failures
 
 ### 1. A duplicate callback aborts the whole registry
 
@@ -88,17 +90,62 @@ value at import time, and the comment there records why.
 it, not where it is used. A relative path that happens to work is a coincidence
 of the container's working directory.
 
+### 4. An import registers a callback, and a consumer never asked
+
+Until v0.7.0, `cosmo_suite/layouts.py` carried `toggle_navbar_collapse` as a
+module-level `@callback`. Every framework page imports `layouts`, so importing
+any page registered it. Measured on `origin/main` of both apps, that one line did
+two different silent things:
+
+| App | Its collapse id | What the module-level callback actually did |
+| --- | --- | --- |
+| COSMOPOLITAN | `navbar-collapse-div-shared-id` — the framework id, mounted in the app's *own* navbar | the navbar toggle worked, and worked **only** as a side effect of the import. The app has no callback of its own. |
+| COSMONAUT | `navbar-collapse-nav-shared-id`, with its own callback | the framework callback was registered against an id that is never mounted: dead weight in the registry. |
+
+Note what this is *not*. It is not the duplicate-callback abort of failure 1 —
+the ids differ, so Dash sees nothing wrong, and nothing crashes on either side.
+It is an invisible dependency in one app and an invisible no-op in the other. The
+day COSMOPOLITAN stops importing a framework page, its hamburger menu stops
+opening on small screens, with no error, no log line and no failing test.
+
+**Rule:** an *import* registers no callbacks. Not "a library module registers
+none" — the defect is the import, not the framework. A function that mounts a
+component and wires that same component in the same call is co-location, and
+`app_layout()` does exactly that with the navbar. What must never happen is
+`import cosmo_suite.layouts` doing it behind an app's back.
+
+A page module is the deliberate exception in the other direction: registering
+itself at import is what a page is *for*.
+
+Which registration goes where follows from whether the component is optional:
+
+| | mounted by | registration |
+| --- | --- | --- |
+| navbar | `app_layout()`, always | called by `app_layout()`. There is no call in which the callback is unwanted. |
+| reset modal | `app_layout(with_reset=True)`, on request | called only when opted in. Registering it unasked would put a feature into a consumer's process that it never wanted. |
+
+`register_navbar_callbacks()` stays public and idempotent for the app that
+mounts `NAVBAR_COLLAPSE_DIV_SHARED_ID` in a navbar of its own and never calls
+`app_layout()` — COSMOPOLITAN's case, and the one line of rework this change
+costs it.
+
+`test_layouts.py` parses `layouts.py` and fails on any module-level `@callback`,
+so the import-time form cannot quietly come back; two more tests pin that
+`app_layout()` does the registration and does not duplicate it when Dash calls
+the layout per request.
+
 ---
 
-## The pattern behind all three
+## The pattern behind all four
 
-A name, an id, or a path is resolved **somewhere other than where it was
-written**, and the wrong resolution is a legal program. Python raises nothing,
-the test suite exercises neither path, and the symptom appears in a different
-page, a different callback, or a different service.
+A name, an id, a path or a registration takes effect **somewhere other than
+where it was written**, and the wrong outcome is a legal program. Python raises
+nothing, the test suite exercises neither path, and the symptom appears in a
+different page, a different callback, or a different service.
 
 When adding anything to the framework that a consumer inherits by importing —
-a shared callback, an exception class, a configured path, an HTML id — ask
+a shared callback, an exception class, a configured path, an HTML id, a
+registration — ask
 whether a consumer could already own that name, and whether they would find out.
 If the answer is "not until a user complains", the seam belongs in this file
 before it belongs in the code.

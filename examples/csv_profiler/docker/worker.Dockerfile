@@ -47,9 +47,16 @@ RUN uv sync --frozen
 # Switch to non-root user
 USER appuser
 
-# Worker command
-CMD echo "Starting Celery worker..."; \
-    python3 /python_docker/cosmo_suite/cosmo_suite/object_storage_manager.py setup_remote; \
+# Worker command.
+#
+# `&&`, not `;`. With `;` a failing storage setup — a moved module, a bad path —
+# still let Celery start, just without a configured rclone remote, and the first
+# symptom was a job failing three layers away from the cause. The import path
+# below is a string no linter reads, and no suite starts the worker through this
+# image — both use `uv run celery`. The `exec celery` marker is what lets a build
+# job run the setup step on its own; see docs/conventions/worker_image.md.
+CMD echo "Starting Celery worker..." && \
+    python3 /python_docker/cosmo_suite/cosmo_suite/object_storage_manager.py setup_remote && \
     exec celery -A csv_profiler.celery_app.celery worker \
         --loglevel=debug \
         --concurrency=4 \

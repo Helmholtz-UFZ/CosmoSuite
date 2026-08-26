@@ -30,6 +30,10 @@ framework-lint:
   script:
     - "uv run ruff format --check cosmo_suite test"
     - "uv run ruff check cosmo_suite test"
+    # uv.lock records the project version too, but it is derived, not a place to
+    # maintain by hand — this fails if it is out of step with pyproject.toml.
+    # The four hand-maintained version places are checked by test_version.py.
+    - "uv lock --check"
 
 # Gate: the framework package must stay domain-free (no CSV-profiler references).
 # The CSV profiler lives in examples/csv_profiler/ and depends on the framework.
@@ -68,6 +72,7 @@ example-lint:
   script:
     - "uv run ruff format --check ."
     - "uv run ruff check ."
+    - "uv lock --check"
 
 example-test:
   stage: "test"

@@ -61,6 +61,17 @@ loading_overlay = dbc.Modal(
 def app_layout(with_reset=False):
     """Create the main page layout with navbar and content.
 
+    Registers the navbar-collapse callback, because it mounts the navbar. The
+    two belong together: a function that puts a component on the page and wires
+    that same component is co-location, not a side effect. What must never
+    happen is an *import* doing it — see ``register_navbar_callbacks``.
+
+    Note the asymmetry with ``with_reset``, which is deliberate. The reset modal
+    is optional, so registering its callbacks unasked would put a feature into a
+    consumer's process that it never wanted. The navbar is not optional: every
+    layout this function builds has one, so there is no call in which the
+    callback is unwanted.
+
     Args:
         with_reset: Include the job-reset confirmation modal and register its
             callbacks. Opt-in, because an app that offers no reset action would
@@ -70,6 +81,8 @@ def app_layout(with_reset=False):
             ``{"job_id": …, "action": "resubmit"|"reset"}`` into
             RESET_JOB_STORE_SHARED_ID.
     """
+    register_navbar_callbacks()
+
     children = [
         dcc.Location(id=URL_LOCATION_SHARED_ID, refresh=True),
         error_modal,
@@ -158,17 +171,54 @@ def create_navbar():
     )
 
 
-@callback(
-    Output(NAVBAR_COLLAPSE_DIV_SHARED_ID, "is_open"),
-    [Input(NAVBAR_TOGGLER_BUTTON_SHARED_ID, "n_clicks")],
-    [State(NAVBAR_COLLAPSE_DIV_SHARED_ID, "is_open")],
-    prevent_initial_call=True,
-)
-def toggle_navbar_collapse(n_clicks, is_open):
-    """Toggle the navbar collapse state."""
-    if n_clicks:
-        return not is_open
-    return is_open
+# Dash raises DuplicateCallback if the same callback is registered twice, and an
+# app may call the registration from more than one place. Same guard as
+# `_reset_callbacks_registered` further down.
+_navbar_callbacks_registered = False
+
+
+def register_navbar_callbacks():
+    """Register the navbar-collapse toggle (idempotent).
+
+    ``app_layout`` calls this for you. It is public for the app that mounts
+    NAVBAR_COLLAPSE_DIV_SHARED_ID in a navbar of its own and never calls
+    ``app_layout`` — COSMOPOLITAN's case, and the reason this is a function
+    rather than a line inside ``app_layout``.
+
+    Until v0.6.2 the callback sat at module level, so the mere
+    ``import cosmo_suite.layouts`` that every framework page performs registered
+    it. That made it invisible in both directions:
+
+    - COSMOPOLITAN mounts the framework id in its own navbar and has no callback
+      of its own. Its toggle worked purely as a side effect of that import — and
+      would have died without a word the day it stopped importing a framework
+      page.
+    - COSMONAUT mounts a different id and registers its own callback. The
+      framework's was registered against an id that is never on the page: dead
+      weight in the registry, equally silent.
+
+    Neither is an error Dash can report. The rule the fix follows is narrow: an
+    *import* must not register application behaviour. A function that mounts the
+    component and wires it in the same breath is fine, which is why
+    ``app_layout`` calls this and why nothing here is opt-in. See
+    docs/conventions/framework_page_imports.md.
+    """
+    global _navbar_callbacks_registered
+    if _navbar_callbacks_registered:
+        return
+    _navbar_callbacks_registered = True
+
+    @callback(
+        Output(NAVBAR_COLLAPSE_DIV_SHARED_ID, "is_open"),
+        [Input(NAVBAR_TOGGLER_BUTTON_SHARED_ID, "n_clicks")],
+        [State(NAVBAR_COLLAPSE_DIV_SHARED_ID, "is_open")],
+        prevent_initial_call=True,
+    )
+    def toggle_navbar_collapse(n_clicks, is_open):
+        """Toggle the navbar collapse state."""
+        if n_clicks:
+            return not is_open
+        return is_open
 
 
 JOB_STATUS_COLORS = {
@@ -179,13 +229,41 @@ JOB_STATUS_COLORS = {
 }
 
 
-def create_header(title, subtitle, bg_color="bg-info", rounded=True):
-    """Create a header layout."""
+def create_header(title, subtitle, bg_color="bg-info", id=None, rounded=True):
+    """Create a header layout.
+
+    Args:
+        title: Text of the H2.
+        subtitle: Text of the H3; an empty string leaves the element out.
+        bg_color: Bootstrap background class for the wrapping div.
+        id: When given, stamps ``id`` on the div, ``{id}-title`` on the H2 and
+            ``{id}-subtitle`` on the H3 — the three handles COSMOPOLITAN's
+            hydration callbacks write into. When ``None``, **no ids are stamped
+            at all**, which is what every framework page needs.
+
+            There is deliberately no default id. The local copies both apps
+            carried defaulted to ``id=""`` and therefore stamped the colliding
+            ``""``, ``"-title"`` and ``"-subtitle"`` on every header built
+            without one; COSMONAUT deleted its copy over exactly that. An empty
+            id is not "no id", it is a duplicate id shared by every header on
+            the page.
+        rounded: Round the top corners.
+
+    ``id`` shadows the builtin. Renaming it would break the call sites this
+    parameter exists to serve, and no builtin ``id()`` is used in this module.
+    """
     className = f"{bg_color} rounded-top py-2" if rounded else f"{bg_color} py-2"
-    children = [html.H2(title, className="text-center")]
+
+    def id_kwargs(suffix):
+        """Return the ``id=`` kwargs for one element, empty when no id is set."""
+        return {} if id is None else {"id": f"{id}{suffix}"}  # nocheck - dynamic
+
+    children = [html.H2(title, className="text-center", **id_kwargs("-title"))]
     if subtitle != "":
-        children.append(html.H3(subtitle, className="text-center"))
-    return html.Div(className=className, children=children)
+        children.append(
+            html.H3(subtitle, className="text-center", **id_kwargs("-subtitle"))
+        )
+    return html.Div(className=className, children=children, **id_kwargs(""))
 
 
 def create_job_header(title, job):

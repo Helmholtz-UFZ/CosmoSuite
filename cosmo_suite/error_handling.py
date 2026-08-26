@@ -96,6 +96,30 @@ class JobTableNotConfigured(Exception):
         )
 
 
+USE_ERROR_MESSAGE = "use_error_message"
+"""Sentinel message: show ``str(error)`` to the user instead of a fixed text.
+
+Put it in the *message* slot of a response-table entry when the exception
+already carries the sentence the user needs to read — a parser saying which
+column of their file is malformed, for example. Without it there is no way to
+pass such a message through: every other entry is a constant written long
+before the error happened.
+
+It belongs to the table, not to the app that fills one in, which is why it is
+exported from here.
+"""
+
+EXPECTED_ERRORS = (
+    NotFound,
+    JobNotFound,
+    InvalidJobID,
+)
+"""Exceptions the framework treats as normal user states.
+
+They get the modal but no traceback and no ``on_unhandled`` call. An app whose
+set differs passes its own tuple as ``expected_errors``; see ``handle_error``.
+"""
+
 database_error_title = "Database Connection Error"
 database_error_message = "Unfortunately, it is not possible to connect to the job database. Please try again later."  # noqa
 error_responds_dict = {
@@ -149,6 +173,19 @@ error_responds_dict = {
         "Ups this should not happen. An error occurred.",
     ),
 }
+"""Framework response table: exception type -> (modal title, modal message).
+
+**Never mutate this from outside the framework.** An app that needs its own
+entries passes them to ``handle_error`` as ``error_responses``; they are laid
+over this table for the duration of the call and this dict stays untouched.
+
+Mutating it works today only because ``handle_error`` happens to read the module
+attribute on every call. It is a workaround for a missing seam, and it breaks
+silently the moment the framework copies the table, caches it, or an app's
+``import`` lands after the first error — none of which would raise anything.
+The message slot accepts ``USE_ERROR_MESSAGE`` to show ``str(error)``.
+"""
+
 error_modal = dbc.Modal(
     [
         dbc.ModalHeader(
@@ -187,7 +224,11 @@ def _truncate_data(data):
 
 
 def handle_error(
-    error, *, on_unhandled: Callable[[Exception], None] | None = None
+    error,
+    *,
+    on_unhandled: Callable[[Exception], None] | None = None,
+    error_responses: dict[type[Exception], tuple[str, str]] | None = None,
+    expected_errors: tuple[type[Exception], ...] | None = None,
 ) -> None:
     """Handle the error, show it in the modal, and optionally report it.
 
@@ -207,17 +248,44 @@ def handle_error(
             The framework never imports an email service itself: that would pull
             mail configuration into the framework's dependencies and close an
             import cycle back into the app. It only calls what it is handed.
+        error_responses: Entries laid **over** ``error_responds_dict`` for this
+            call — the app supplies only its own exception types and the
+            framework entries it wants to reword. Overlay rather than
+            replacement, so an app never has to restate the database and job
+            entries it is happy with.
+
+            It exists because no framework entry can ever match an exception the
+            framework cannot import. COSMOPOLITAN's ``FileValidationError``
+            comes from ``soil_moisture_prediction.input_file_parser``: a
+            different class from ``cosmo_suite.error_handling.FileValidationError``
+            that happens to share its name, so the framework's entry is not a
+            worse match for it — it is no match at all.
+
+            Use ``USE_ERROR_MESSAGE`` as the message to show ``str(error)``.
+        expected_errors: **Replaces** ``EXPECTED_ERRORS`` when given, and does
+            not extend it. An app must be able to take an entry *out* as well as
+            put one in; the framework's three are a default, not a floor.
+
+            What "expected" buys an exception: the modal, and nothing else — no
+            traceback in the log, no ``on_unhandled`` call. COSMOPOLITAN counts
+            six, three of them ordinary user states that would otherwise mail
+            the maintainer on every single occurrence.
+
+    Both keyword arguments default to the framework's own values, so
+    ``handle_error(error)`` behaves exactly as it did in v0.6.2. That is pinned
+    by a test: a consumer re-pinning to this version must not be able to notice.
     """
     log.debug(f"Error: {error}")
 
-    if not isinstance(
-        error,
-        (
-            NotFound,
-            JobNotFound,
-            InvalidJobID,
-        ),
-    ):
+    responses = error_responds_dict
+    if error_responses is not None:
+        # A copy per call. The app's entries must not leak into the module table
+        # and reach the next app in the same process — nor into the next call.
+        responses = {**error_responds_dict, **error_responses}
+
+    expected = EXPECTED_ERRORS if expected_errors is None else expected_errors
+
+    if not isinstance(error, expected):
         callback_context = dash.ctx
         truncated_triggered = _truncate_data(callback_context.triggered)
         log.error(f"Unhandled error: {error}")
@@ -242,14 +310,19 @@ def handle_error(
     # back to the generic Exception entry. A subclass of a mapped type does not
     # inherit its entry — this is a lookup, not an isinstance walk.
     error_type = type(error)
-    if error_type not in error_responds_dict:
+    if error_type not in responses:
         error_type = Exception
-    error_title, error_message = error_responds_dict[error_type]
+    error_title, error_message = responses[error_type]
 
-    try:
-        error_message = error_message.format(job_id=error.job_id)
-    except AttributeError:
-        pass
+    if error_message == USE_ERROR_MESSAGE:
+        # No .format() on this branch: the text comes from the exception, not
+        # from the table, and a parser message is free to contain braces.
+        error_message = str(error)
+    else:
+        try:
+            error_message = error_message.format(job_id=error.job_id)
+        except AttributeError:
+            pass
 
     log.error(f"{error_title}: {error_message}")
     log.error(f"Error details: {traceback.format_exc()}")

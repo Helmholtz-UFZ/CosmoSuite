@@ -117,6 +117,7 @@ For specific implementation details, see:
 - [Config Model Contract](docs/conventions/config_model_contract.md) - The Job config-model seam
 - [Framework Page Imports](docs/conventions/framework_page_imports.md) - What a consumer inherits by importing a page, and how it fails silently
 - [Database Schema](docs/conventions/database_schema.md) - Shared `Base`, the `JobColumns` intersection mixin, DDL ownership
+- [Worker Image](docs/conventions/worker_image.md) - The Dockerfile `CMD` seam, why `&&` not `;`, and the smoke test that belongs in the apps
 
 **Important** read the convention before you make any codebase exploration or answering.
 Never sacrfice speed for accuracy.

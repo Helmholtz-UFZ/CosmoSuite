@@ -8,6 +8,8 @@ All error handling is centralized in `src/error_handling.py`.
 
 ## Adding New Errors
 
+**In the framework** — the error is one every consumer can hit:
+
 1. **Define custom exception class** in `error_handling.py`:
    ```python
    class MyCustomError(Exception):
@@ -25,6 +27,82 @@ All error handling is centralized in `src/error_handling.py`.
    ```
 
 3. **Decide on severity** - should error be logged at ERROR level?
+
+**In an app** — the error belongs to one domain: do *not* touch
+`error_responds_dict`. Pass the entry as `error_responses`, see the next
+section.
+
+---
+
+## An app's own table and its own expected set
+
+```python
+def handle_error(
+    error,
+    *,
+    on_unhandled: Callable[[Exception], None] | None = None,
+    error_responses: dict[type[Exception], tuple[str, str]] | None = None,
+    expected_errors: tuple[type[Exception], ...] | None = None,
+) -> None
+```
+
+Both are keyword-only and both default to the framework's own values, so
+`handle_error(error)` is unchanged. An app wires them the same way it wires
+`on_unhandled` — one `partial` in `app.py`, no call site changes:
+
+```python
+from functools import partial
+
+from cosmo_suite.error_handling import EXPECTED_ERRORS, USE_ERROR_MESSAGE, handle_error
+from soil_moisture_prediction.input_file_parser import FileValidationError
+
+app = Dash(
+    ...,
+    on_error=partial(
+        handle_error,
+        on_unhandled=notify_maintainer,
+        error_responses={FileValidationError: ("Invalid File", USE_ERROR_MESSAGE)},
+        expected_errors=EXPECTED_ERRORS + (SubmittedException, MapTileDownloadError),
+    ),
+)
+```
+
+### `error_responses` **overlays**, `expected_errors` **replaces**
+
+The asymmetry is deliberate.
+
+- The **table** is a lookup, so an overlay is enough: the app names its own
+  types and the framework entries it wants reworded, and inherits the database
+  and job entries it is happy with. Nothing is lost by not restating them.
+- The **expected set** is a policy, and a policy has to be able to shrink. An
+  app must be able to take `JobNotFound` *out* — to say "I do want to hear about
+  that one" — and an extending argument gives it no way to say so. An app that
+  only wants to add writes `EXPECTED_ERRORS + (…)` and says so in one glance.
+
+"Expected" buys an exception the modal and nothing else: no traceback in the
+log, no `on_unhandled` call. The framework counts three, COSMOPOLITAN six —
+three of them ordinary user states that would otherwise mail the maintainer
+every single time they occur.
+
+### `USE_ERROR_MESSAGE` — show `str(error)`
+
+Put the sentinel in the *message* slot when the exception already carries the
+sentence the user needs. A parser saying which column of their upload is
+malformed is the case it exists for; every other message in the table is a
+constant written long before the error happened. The sentinel branch skips
+`str.format`, so a message containing braces gets through intact.
+
+### Never mutate `error_responds_dict` from outside
+
+COSMONAUT used to call `error_responds_dict.update(...)` on the framework module
+because `handle_error` reads that module attribute on every call. It works
+today. It is a workaround for the seam that now exists, and it breaks silently
+the moment the framework copies or caches the table, or the app's `import` lands
+after the first error — none of which raises anything. It also leaks one app's
+entries into anything else in the process.
+
+`error_responses` is the replacement, and it is per call: the module table is
+never touched. `test_error_handling.py` pins that.
 
 ---
 
@@ -57,17 +135,20 @@ app = Dash(..., on_error=handle_error)
 
 Flow:
 1. Log error at DEBUG level
-2. Check if custom error - log at ERROR with context
-3. Unhandled errors: log traceback, then call `on_unhandled` if one was given
-4. Extract error info for user message
-5. Display modal via `set_props()`
+2. Lay `error_responses` over `error_responds_dict` for this call, and take
+   `expected_errors` if one was given
+3. Unexpected errors: log traceback, then call `on_unhandled` if one was given
+4. Look the title and message up by `type(error)` — an exact-type lookup, not an
+   isinstance walk, so a subclass falls back to the generic `Exception` entry
+5. Resolve `USE_ERROR_MESSAGE`, or format `{job_id}` into the message
+6. Display modal via `set_props()`
 
 ---
 
 ## Notifying someone: the `on_unhandled` hook
 
 ```python
-def handle_error(error, *, on_unhandled: Callable[[Exception], None] | None = None) -> None
+def handle_error(error, *, on_unhandled: Callable[[Exception], None] | None = None, ...) -> None
 ```
 
 Both apps mail their maintainer when an unexpected error reaches the global
@@ -95,7 +176,8 @@ Three properties of this seam are deliberate, and each one is load-bearing:
   for a consumer still pinned to an older tag.
 - **The hook fires only for unexpected errors** — the same set that gets a full
   traceback logged. `JobNotFound`, `InvalidJobID` and `NotFound` are handled by
-  design and must not page anyone.
+  design and must not page anyone. An app that has more such states, or fewer,
+  says so with `expected_errors`.
 
 A hook that raises is logged and swallowed. This is a deliberate deviation from
 the no-bare-`except` rule (`cosmo_suite/error_handling.py` carries the comment):
@@ -121,6 +203,12 @@ and the upload callbacks catch it, so it stays where it is. Resolving the
 collision is app-side work and belongs in the consuming app's own plan; the app
 either catches both classes explicitly, or wraps the foreign exception into the
 framework's at the upload boundary where it is raised.
+
+**What the framework cannot do (Slice 3):** match the foreign class in its
+table. Two classes sharing a name are not one class with two behaviours — the
+framework's entry is not a worse match for the parser's exception, it is no
+match at all, and no framework-side edit can change that. That is the concrete
+reason `error_responses` exists rather than a longer default table.
 
 **What must not happen:** shadowing one import with the other. The `except`
 clause in the upload callback keeps compiling and silently stops matching, so the

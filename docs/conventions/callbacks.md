@@ -19,23 +19,57 @@ def validate_input(value):
 ```
 
 ### Shared Callbacks
-Use `@app.callback` wrapped in registration functions. Called from `app.py`.
+Wrap them in a `register_*_callbacks()` function. Never register a callback at
+module level: the app then inherits it from a bare `import`, and a callback
+nobody asked for fails in ways Dash cannot report — see
+[framework page imports](framework_page_imports.md#4-an-import-registers-a-callback-and-a-consumer-never-asked)
+for the two shapes that failure took in the two apps.
+
+Who calls the function depends on the component. A layout function that mounts
+the component **unconditionally** calls it itself — that is co-location, not a
+side effect, and it is why `app_layout()` registers the navbar toggle. Anything
+optional waits for the app to ask. The function stays public and idempotent
+either way, for the app that mounts the same id in a layout of its own.
+
+`@callback`, not `@app.callback`: Dash's module-level `callback` registers into
+the same global registry, so the function needs no `app` argument and the
+framework never has to be handed the app object. Registration functions are
+**idempotent** — an app may reach one from more than one place, and a second
+`@callback` on the same output is a `DuplicateCallback`.
 
 ```python
-# In layout.py
-def register_navbar_callbacks(app):
-    @app.callback(
-        Output(SEARCH_RESULTS_ID, "children"),
-        Input(SEARCH_BUTTON_ID, "n_clicks"),
-        State(SEARCH_INPUT_ID, "value"),
+# In layouts.py
+_navbar_callbacks_registered = False
+
+
+def register_navbar_callbacks():
+    """Register the navbar-collapse toggle (idempotent)."""
+    global _navbar_callbacks_registered
+    if _navbar_callbacks_registered:
+        return
+    _navbar_callbacks_registered = True
+
+    @callback(
+        Output(NAVBAR_COLLAPSE_DIV_SHARED_ID, "is_open"),
+        Input(NAVBAR_TOGGLER_BUTTON_SHARED_ID, "n_clicks"),
+        State(NAVBAR_COLLAPSE_DIV_SHARED_ID, "is_open"),
         prevent_initial_call=True,
     )
-    def search_job_id(n_clicks, job_id):
+    def toggle_navbar_collapse(n_clicks, is_open):
         ...
 
-# In app.py
-register_navbar_callbacks(app)
+# In layouts.py, from the function that mounts the navbar
+def app_layout(...):
+    register_navbar_callbacks()
+    ...
+
+# In app.py, only for an app building its own navbar around the shared id
+register_navbar_callbacks()
 ```
+
+The framework ships two of these, both called by `app_layout()`:
+`register_navbar_callbacks()` always, `register_reset_callbacks()` only with
+`with_reset=True`.
 
 ---
 

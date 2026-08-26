@@ -12,9 +12,21 @@ the one with services, fixtures and Playwright, and the one that actually
 exercises the framework end to end.
 
 The framework suite covers what can be checked without a running stack — static
-HTML-id enforcement, and the seams the apps depend on (`on_unhandled`, the
-`BaseJob` contract, the `serve_files` job class, the layout wrapper). It has no
+HTML-id enforcement, the release-version places, and the seams the apps depend
+on: `handle_error`'s `on_unhandled` / `error_responses` / `expected_errors`, the
+`BaseJob` contract, the `serve_files` job class, the layout wrapper,
+`create_header`'s optional id, and the navbar-callback registration. It has no
 `run_pytest.sh` and needs none.
+
+Two of those are worth naming because they are not tests of behaviour:
+
+- `test_html_id_enforcement.py` and the module-level-`@callback` check in
+  `test_layouts.py` parse the source. They catch conventions coming undone,
+  which no behavioural test can.
+- `test_version.py` checks the four hand-maintained places the release version
+  is written against each other — never against a tag, because two of them are
+  pin examples already naming the version about to be released. The derived
+  places (both `uv.lock`) are covered by `uv lock --check` in the lint jobs.
 
 **It does have a `test/conftest.py`, and that file is load-bearing.**
 `cosmo_suite.config` reads its environment at import time and raises for anything
@@ -135,6 +147,8 @@ Service requirements vary by test:
 | `test_db_manager.py` | Postgres |
 | `test_env.py` | None (reads env files only) |
 | `test_html_id_enforcement.py` | None (checks source code only) |
+
+The framework suite at the repo root needs no services at all.
 
 ## Fixtures (`conftest.py`)
 

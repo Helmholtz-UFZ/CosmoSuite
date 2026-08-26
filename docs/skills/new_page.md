@@ -144,7 +144,10 @@ def layout(job_id):  # or def layout(): for static-route dynamic content
 
 **Available layout helpers** from `src/layout.py`:
 - `create_card_input(card_body, card_footer, name_step, title, job_id)` — card with optional progress tabs
-- `create_header(title, subtitle, bg_color, rounded)` — page header
+- `create_header(title, subtitle, bg_color, id, rounded)` — page header. Leave
+  `id` unset unless a callback writes into the header; it then stamps `id`,
+  `{id}-title` and `{id}-subtitle`. Never pass `id=""` — that stamps three
+  colliding ids shared by every header on the page.
 - `progress_footer(prev_id, prev_url, next_id, next_url, ...)` — prev/next navigation footer
 - `create_map(job, extra_layers)` — Leaflet map component
 - `create_reset_banner(job_id, status)` — status banner with reset button (non-PENDING jobs)

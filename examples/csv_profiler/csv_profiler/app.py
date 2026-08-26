@@ -83,7 +83,10 @@ log.info("Celery Beat scheduler started in background thread")
 # Serve files
 serve_files(app)
 
-# Main app layout. with_reset=True: the input and job-submission pages offer a
+# Main app layout. app_layout() registers the navbar-collapse callback itself,
+# since it is the thing that mounts the navbar; an app building its own navbar
+# around the shared id calls layouts.register_navbar_callbacks() instead.
+# with_reset=True: the input and job-submission pages offer a
 # "Reset job" action, so this app opts into the framework's reset modal.
 app.layout = app_layout(with_reset=True)
 
