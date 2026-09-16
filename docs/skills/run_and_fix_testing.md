@@ -18,7 +18,7 @@ Ask the user before starting:
 ## 2. Step-by-step Diagnostic Checklist
 
 **Services are required for meaningful results.** Most tests depend on PostgreSQL,
-MinIO, and Redis. Always run `./run_pytest.sh` (which starts services automatically).
+object storage, and Redis. Always run `./run_pytest.sh` (which starts services automatically).
 Never use `--no-services` unless you are certain the test has no service fixtures.
 
 ### Step 1: Reproduce locally
@@ -82,9 +82,9 @@ open test/artifacts/<test-dir>/page.html
 | Error | Cause | Fix |
 |-------|-------|-----|
 | `PostgreSQL not available` | DB container failed health check | `docker logs postgres_cosmo_suite` |
-| `MinIO not available` | Object storage failed health check | `docker logs minio_cosmo_suite` |
+| `Object storage did not start` / `Object storage (S3) connectivity check failed` | S3 server unhealthy or unreachable | `docker logs object_storage_cosmo_suite` |
 | `Redis not available` | Redis failed health check | `docker logs redis_cosmo_suite` |
-| Port already in use | Leftover Docker containers or another process on 5433/9010/6380 | 1. `docker compose down` in the current project first. 2. If persists, tell the user which port is blocked — a sibling project (cosmopolitan, etc.) may be running in parallel and only the user knows which is safe to stop. |
+| Port already in use | Leftover Docker containers or another process on 5434/9020/6381 | 1. `docker compose down` in the current project first. 2. If persists, tell the user which port is blocked — a sibling project (cosmopolitan, etc.) may be running in parallel and only the user knows which is safe to stop. |
 | Docker not running | Docker daemon not started | `sudo systemctl start docker` |
 
 ---
@@ -153,12 +153,12 @@ docker logs postgres_cosmo_suite
 docker exec postgres_cosmo_suite pg_isready -U cosmo_suite_user
 ```
 
-**MinIO:**
+**Object storage (RustFS):**
 
 ```bash
-docker ps | grep minio_cosmo_suite
-docker logs minio_cosmo_suite
-curl -sf http://localhost:9010/minio/health/ready
+docker ps | grep object_storage_cosmo_suite
+docker logs object_storage_cosmo_suite
+curl -sf http://localhost:9020/health/ready
 ```
 
 **Redis:**
@@ -194,11 +194,11 @@ docker compose down --remove-orphans
 
 **Environment differences:**
 
-| Aspect | Local (`env_test_local`) | CI (`env_test`) |
+| Aspect | Local (`env_test`) | CI (`env_ci`) |
 |--------|--------------------------|------------------|
-| PostgreSQL | `localhost:5433` | `postgres:5432` |
-| MinIO | `localhost:9010` | `minio:9000` |
-| Redis | `localhost:6380` | `redis:6379` |
+| PostgreSQL | `localhost:5434` | `postgres:5432` |
+| Object storage | `localhost:9020` | `object-storage:9000` |
+| Redis | `localhost:6381` | `redis:6379` |
 | Browser | `--headed` option available | headless only |
 | Services | Docker Compose containers | GitLab service containers |
 

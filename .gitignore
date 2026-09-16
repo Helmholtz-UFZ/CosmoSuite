@@ -9,7 +9,6 @@ examples/csv_profiler/test/artifacts/
 python_path
 .idea
 .config
-minio_config
 celerybeat-schedule
 .env.bak
 .docker_build_hash

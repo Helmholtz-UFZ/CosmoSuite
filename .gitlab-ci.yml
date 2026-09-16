@@ -7,13 +7,17 @@ stages:
   - "lint"
   - "test"
 
+include:
+  # Consumers include the same file from a tag — see the header of that file.
+  - local: "/ci/object-storage.gitlab-ci.yml"
+
 variables:
   # Used by GitLab to initialise the postgres service container (example-test)
   POSTGRES_DB: cosmo_suite
   POSTGRES_USER: cosmo_suite_user
   POSTGRES_PASSWORD: test
   POSTGRES_HOST_AUTH_METHOD: trust
-  # Used by the minio service variables block below
+  # Credentials for the object storage service (ci/object-storage.gitlab-ci.yml)
   OBJECT_STORAGE_ACCESS_KEY: "accesskey"
   OBJECT_STORAGE_SECRET_KEY: "secretkey"
 
@@ -80,24 +84,16 @@ example-test:
   services:
     - name: "postgres:17"
       alias: postgres
-    # minio/minio is gone from Docker Hub. MinIO stopped publishing images, so
-    # quay's :latest is frozen at this release anyway — pin it explicitly.
-    - name: "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z"
-      alias: minio
-      command: ["server", "/data", "--console-address", ":9001"]
-      variables:
-        MINIO_ROOT_USER: "${OBJECT_STORAGE_ACCESS_KEY}"
-        MINIO_ROOT_PASSWORD: "${OBJECT_STORAGE_SECRET_KEY}"
+    - !reference [.cosmo-suite-object-storage, services]
     - name: "redis:7-alpine"
       alias: redis
   before_script:
     - apt-get update && apt-get install -y postgresql-client curl rclone
+    - !reference [.cosmo-suite-object-storage, before_script]
     - cd examples/csv_profiler
     - "cp env_ci .env"
     - "source .env"
-    - "rclone config create minio s3 provider=Minio access_key_id=${OBJECT_STORAGE_ACCESS_KEY} secret_access_key=${OBJECT_STORAGE_SECRET_KEY} endpoint=${OBJECT_STORAGE_HOST}"
-    - "rclone mkdir minio:${OBJECT_STORAGE_BUCKET}"
-    - "rclone lsd minio:"
+    # No rclone setup here: conftest runs setup_remote() and create_bucket().
     - "export PGPASSWORD=${POSTGRES_PASSWORD}"
     - "psql -h ${POSTGRES_HOST_NAME} -U ${POSTGRES_USER} -d ${POSTGRES_DB} < docker/init.sql"
     - "pip install uv"

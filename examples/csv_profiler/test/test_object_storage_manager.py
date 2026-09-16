@@ -1,4 +1,4 @@
-"""Test the framework's object storage manager against MinIO."""
+"""Test the framework's object storage manager against a real S3 server."""
 
 import os
 import shutil

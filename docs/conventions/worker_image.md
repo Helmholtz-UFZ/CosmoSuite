@@ -74,7 +74,8 @@ against, one level up. Verified by mutation: with the path bent in the
 Dockerfile the derived form exits 2, the copied form stays green.
 
 `setup_remote()` writes an rclone config file and talks to no service, so this
-needs no MinIO. It does need the environment `config.py` reads at import.
+needs no object storage server. It does need the environment `config.py` reads at
+import, and the `rclone` binary, which it asks for the config file's path.
 
 **Catches:** any import path in the `CMD` that no longer resolves.
 **Does not catch:** a wrong Celery command behind the marker.

@@ -45,7 +45,7 @@ Run everything from `examples/csv_profiler/`.
 
 ```bash
 uv sync         # install the example + cosmo-suite (editable, local path) into a venv
-./dev_up.sh     # build & start app + worker + postgres/minio/redis via docker compose
+./dev_up.sh     # build & start app + worker + postgres/object-storage/redis via docker compose
 ```
 
 Open **http://localhost:8080**, upload a CSV, and watch the profiling job run. Stop
@@ -55,7 +55,7 @@ enables debug mode (auto-reload on code changes).
 ### Tests
 
 ```bash
-./run_pytest.sh   # starts postgres/minio/redis, runs the suite, tears everything down
+./run_pytest.sh   # starts postgres/object-storage/redis, runs the suite, tears everything down
 ```
 
 The end-to-end tests drive a browser with Playwright. If you hit a

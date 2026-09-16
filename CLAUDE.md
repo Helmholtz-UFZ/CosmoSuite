@@ -1,6 +1,6 @@
 ## Project Overview
 
-Cosmo Suite is the shared Dash + Celery + PostgreSQL + MinIO application framework used
+Cosmo Suite is the shared Dash + Celery + PostgreSQL + S3 application framework used
 by COSMOPOLITAN and COSMONAUT. This repo is the framework's home; it also ships a
 reference domain, `examples/csv_profiler/` — a CSV statistical profiler — that
 demonstrates how to integrate a Python computation module into the framework.
@@ -11,7 +11,7 @@ The application is built as a Dash web application with the following key compon
 
 - **Web Framework**: Dash (plotly) with Flask server backend
 - **Database**: PostgreSQL (plain, no PostGIS)
-- **Object Storage**: MinIO for file storage with rclone integration
+- **Object Storage**: S3 (UFZ S3 in prod, RustFS locally and in CI) via rclone
 - **Background Tasks**: Celery with Redis broker for distributed task processing
 
 ### Core Modules
@@ -117,6 +117,7 @@ For specific implementation details, see:
 - [Config Model Contract](docs/conventions/config_model_contract.md) - The Job config-model seam
 - [Framework Page Imports](docs/conventions/framework_page_imports.md) - What a consumer inherits by importing a page, and how it fails silently
 - [Database Schema](docs/conventions/database_schema.md) - Shared `Base`, the `JobColumns` intersection mixin, DDL ownership
+- [Object Storage](docs/conventions/object_storage.md) - The S3 server for dev/CI, the shared CI template, wiring up an app, swapping the server
 - [Worker Image](docs/conventions/worker_image.md) - The Dockerfile `CMD` seam, why `&&` not `;`, and the smoke test that belongs in the apps
 
 **Important** read the convention before you make any codebase exploration or answering.

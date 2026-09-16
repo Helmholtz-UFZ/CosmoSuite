@@ -23,7 +23,7 @@ Grouped by service. The full list lives in `config.env_vars`.
 - **Web / App**: `WEB_WORK_DIR`, `FLASK_PORT`, `FLASK_DEBUG`, `WEB_OUTSIDE_URL`
 - **PostgreSQL**: `POSTGRES_DB`, `POSTGRES_HOST_NAME`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
 - **Redis / Celery**: `REDIS_HOST`, `REDIS_PORT`, `REDIS_DB`, `REDIS_PASSWORD`
-- **Object Storage (S3/MinIO)**: `OBJECT_STORAGE_ACCESS_KEY`, `OBJECT_STORAGE_SECRET_KEY`, `OBJECT_STORAGE_HOST`, `OBJECT_STORAGE_BUCKET`, `OBJECT_STORAGE_REMOTE_NAME`
+- **Object Storage (S3)**: `OBJECT_STORAGE_ACCESS_KEY`, `OBJECT_STORAGE_SECRET_KEY`, `OBJECT_STORAGE_HOST`, `OBJECT_STORAGE_BUCKET`, `OBJECT_STORAGE_REMOTE_NAME`
 
 ---
 
@@ -45,9 +45,12 @@ How env vars reach containers (see `docker-compose.yml`):
 
 - **App and worker containers**: `env_file: .env` passes all variables from the
   active `.env` file.
-- **Postgres and MinIO**: `environment:` block with `${VAR}` interpolation maps
-  project variables to the service's expected names (e.g.
-  `MINIO_ROOT_USER: ${OBJECT_STORAGE_ACCESS_KEY}`).
+- **Postgres and object storage**: `environment:` block with `${VAR}` interpolation
+  maps project variables to the service's expected names (e.g.
+  `RUSTFS_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY}`).
+- **Host ports** (`FLASK_HOST_PORT`, `POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`,
+  `OBJECT_STORAGE_HOST_PORT`, `OBJECT_STORAGE_CONSOLE_HOST_PORT`): read by compose
+  only, never by `config.py`, so they are not in `config.env_vars`.
 - **Production Dockerfiles** (`docker/prod.Dockerfile`, `docker/worker.Dockerfile`):
   `COPY env_prod .env` bakes non-secret vars into the image; the CMD sources
   `.env` before starting the process.

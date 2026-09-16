@@ -4,6 +4,12 @@
 **Erstellt:** 2026-08-11 · **Kanonischer Ort:** dieses Repo (die Zuteilung ist
 repo-übergreifend und darf nur **eine** Quelle haben)
 
+> **Nachtrag 2026-09-16:** MinIO ist durch RustFS ersetzt. Der Dienst heißt jetzt in allen
+> drei Repos `object-storage`, die Host-Port-Variablen `OBJECT_STORAGE_HOST_PORT` /
+> `OBJECT_STORAGE_CONSOLE_HOST_PORT` (vorher `MINIO_HOST_PORT` bzw. in cosmonaut
+> `OBJECT_STORAGE_PORT`). §0–§2 geben den damals gemessenen Stand wieder. Siehe
+> [`object_storage.md`](../conventions/object_storage.md).
+
 ---
 
 ## 0. Problem
@@ -76,8 +82,8 @@ heutige Wert ist**:
 webserver:  ports: ["${FLASK_HOST_PORT:-8080}:${FLASK_PORT}"]
 postgres:   ports: ["${POSTGRES_HOST_PORT:-5432}:5432"]
 redis:      ports: ["${REDIS_HOST_PORT:-6379}:6379"]
-minio:      ports: ["${MINIO_HOST_PORT:-9000}:9000",
-                    "${MINIO_CONSOLE_HOST_PORT:-9001}:9001"]
+object-storage: ports: ["${OBJECT_STORAGE_HOST_PORT:-9000}:9000",
+                        "${OBJECT_STORAGE_CONSOLE_HOST_PORT:-9001}:9001"]
 tileserver: ports: ["${TILESERVER_HOST_PORT:-8001}:80"]
 ```
 
@@ -95,7 +101,7 @@ außerhalb von Docker zählt nur `FLASK_PORT`.
 
 ## 4. Zuteilung
 
-| | Flask | Postgres | Redis | MinIO | Console | Tileserver |
+| | Flask | Postgres | Redis | Object Storage | Console | Tileserver |
 |---|---|---|---|---|---|---|
 | **cosmopolitan** | 8080 | 5432 | 6379 | 9000 | 9001 | 8001 |
 | **cosmonaut** | 8081 | 5433 | 6380 | 9010 | 9011 | 8011 |

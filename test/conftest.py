@@ -6,7 +6,7 @@ imports anything from the framework. pytest loads this file before it collects
 the test modules, which makes it the only place that can set them without an
 inline import.
 
-The framework suite talks to no service — no postgres, no MinIO, no redis — so
+The framework suite talks to no service — no postgres, no object storage, no redis — so
 these are placeholders that only need to be present and syntactically valid. A
 variable already exported in the environment wins, which is what lets the same
 suite run inside the example's docker stack.

@@ -2,7 +2,7 @@
 
 # Cosmo Suite
 
-The shared **Dash + Celery + PostgreSQL + MinIO** application framework at the core of
+The shared **Dash + Celery + PostgreSQL + S3** application framework at the core of
 the suite of sister apps [COSMOPOLITAN](https://github.com/Helmholtz-UFZ/Cosmopolitan) and
 [COSMONAUT](https://github.com/Helmholtz-UFZ/Cosmonaut). The framework owns the *workflow machinery*: the app
 shell, job lifecycle, Celery wiring, object storage, logging, error handling, and the
@@ -40,7 +40,7 @@ way `dash_form_factory` is already shared across the suite:
 ```toml
 [project]
 dependencies = [
-    "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.7.0",
+    "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.8.0",
 ]
 
 [tool.hatch.metadata]
@@ -56,6 +56,9 @@ Two things bite every consumer, and neither announces itself as a framework prob
 - **`[tool.hatch.metadata] allow-direct-references = true` is mandatory.** Without it
   hatchling rejects the `git+https://` pin outright: building the app's own wheel
   fails, not the dependency install.
+- **The S3 server for tests comes from the framework too.** Include
+  `ci/object-storage.gitlab-ci.yml` at the pinned tag and copy one compose block;
+  see [object storage](docs/conventions/object_storage.md).
 - **`git` must be installed in the CI image.** `uv export` writes the dependency as a
   `git+https://` URL, so an image build without `git` breaks the next time `uv.lock`
   changes, long after the change that caused it.
@@ -79,7 +82,8 @@ the local path (`[tool.uv.sources]` in the example's `pyproject.toml`), so
 ### Releasing (two-step, tagged)
 
 1. Publish the framework: bump `version` in `pyproject.toml` and tag it on `main`.
-2. Bump the `cosmo-suite` pin in each consumer's `pyproject.toml` **and** `uv.lock`.
+2. Bump the `cosmo-suite` pin in each consumer's `pyproject.toml` **and** `uv.lock`,
+   and the `ref:` of its `ci/object-storage.gitlab-ci.yml` include.
 
 **The pin bump must land on `main` and be tagged before any image build**: a scheduled
 `build-latest-tag` checks out the latest tag, so an untagged bump would silently ship
@@ -106,12 +110,12 @@ reference appears under `cosmo_suite/`.
 cd examples/csv_profiler
 uv sync                      # framework (editable, local path) + example deps
 ./dev_up.sh                  # app + worker via docker compose  →  http://localhost:8080
-./run_pytest.sh              # starts postgres/minio/redis and runs the suite
+./run_pytest.sh              # starts postgres/object-storage/redis and runs the suite
 ```
 
 ## Testing
 
-- **Framework:** `uv run pytest test/` at the repo root (static id enforcement); plus
+- **Framework:** `uv run pytest test/` at the repo root (no services needed); plus
   the `ruff` lint and the domain-free grep gate (`.gitlab-ci.yml`).
 - **Example (integration + e2e):** from `examples/csv_profiler/`, `./run_pytest.sh`.
 

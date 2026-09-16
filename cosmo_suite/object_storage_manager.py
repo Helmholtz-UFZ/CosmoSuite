@@ -1,14 +1,23 @@
-"""This module provides functions to manage object storage using rclone."""
+"""This module provides functions to manage object storage using rclone.
 
+Transfers go through rclone; boto3 is only used to sign download URLs. Both talk
+plain S3, so any S3-compatible store works (UFZ S3 in production, RustFS locally
+and in CI — see docs/conventions/object_storage.md).
+"""
+
+import configparser
 import logging
 import os
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import timedelta
+from functools import cache
 
-from minio import Minio
-from minio.error import S3Error
+import boto3
+from botocore.config import Config
+from botocore.exceptions import BotoCoreError
 
 from cosmo_suite.config import (
     JOB_WORK_DIR_TEMPLATE,
@@ -28,6 +37,15 @@ log = logging.getLogger(__name__)
 TRANSFER_TIMEOUT = 600  # copy / sync / purge — grows with the job's file volume
 CONTROL_TIMEOUT = 60  # listings, single-file delete, config, mkdir
 CONNECTION_CHECK_TIMEOUT = 5  # the pre-flight below, which must fail fast
+
+# rclone and boto3 have to sign for the same region. S3-compatible stores that are
+# not AWS accept any name; us-east-1 is the one every client falls back to.
+OBJECT_STORAGE_REGION = "us-east-1"
+
+# SigV4 caps a presigned URL at seven days. boto3 signs a longer expiry without
+# complaint and the store refuses the URL only when it is used — for a QR code or
+# an e-mailed link that is days later, far away from any log.
+MAX_PRESIGN_EXPIRY = timedelta(days=7)
 
 
 # Convention deviation (CLAUDE.md): custom exceptions normally live in
@@ -73,41 +91,56 @@ def check_result(params: list, result: subprocess.CompletedProcess) -> None:
         raise ObjectStorageError
 
 
+@cache
+def _s3_client():
+    """Build the S3 client once per process. It opens no connection by itself."""
+    return boto3.client(
+        "s3",
+        endpoint_url=OBJECT_STORAGE_HOST,
+        aws_access_key_id=OBJECT_STORAGE_ACCESS_KEY,
+        aws_secret_access_key=OBJECT_STORAGE_SECRET_KEY,
+        region_name=OBJECT_STORAGE_REGION,
+        # Path style, like rclone's force_path_style: virtual-host style puts the
+        # bucket into the hostname, which a non-AWS store does not resolve.
+        config=Config(signature_version="s3v4", s3={"addressing_style": "path"}),
+    )
+
+
 def get_presigned_download_url(object_key: str, expiry: timedelta) -> str:
     """Generate a presigned GET URL for an object in S3-compatible storage.
 
     The URL carries its own credentials, so it can be handed to a client outside
     the network (e.g. encoded into a QR code) without exposing the storage keys.
 
+    Signing is local: no request reaches the store, so this works while the store
+    is down and does not prove the object exists.
+
     Args:
         object_key: Key of the object (e.g. "{job_id}/result.csv")
-        expiry: Duration for which the URL is valid
+        expiry: Duration for which the URL is valid, at most seven days
 
     Returns:
         str: Presigned URL that can be downloaded without credentials
 
     Raises:
-        ObjectStorageError: If S3 operation fails
+        ValueError: If expiry is not positive or exceeds MAX_PRESIGN_EXPIRY
+        ObjectStorageError: If the URL cannot be signed
     """
-    secure = OBJECT_STORAGE_HOST.startswith("https://")
-    endpoint = OBJECT_STORAGE_HOST.replace("https://", "").replace("http://", "")
-    client = Minio(
-        endpoint=endpoint,
-        access_key=OBJECT_STORAGE_ACCESS_KEY,
-        secret_key=OBJECT_STORAGE_SECRET_KEY,
-        secure=secure,
-    )
-    try:
-        url = client.presigned_get_object(
-            OBJECT_STORAGE_BUCKET,
-            object_key,
-            expires=expiry,
+    if not timedelta(0) < expiry <= MAX_PRESIGN_EXPIRY:
+        raise ValueError(
+            f"Presign expiry must be within (0, {MAX_PRESIGN_EXPIRY}], got {expiry}"
         )
-        log.debug(f"Generated presigned URL for {object_key}")
-        return url
-    except S3Error as e:
-        log.error(f"S3 error generating presigned URL for {object_key}: {e}")
+    try:
+        url = _s3_client().generate_presigned_url(
+            "get_object",
+            Params={"Bucket": OBJECT_STORAGE_BUCKET, "Key": object_key},
+            ExpiresIn=int(expiry.total_seconds()),
+        )
+    except BotoCoreError as e:
+        log.error(f"Presigning failed for {object_key}: {e}")
         raise ObjectStorageError(f"Presigning failed for {object_key}") from e
+    log.debug(f"Generated presigned URL for {object_key}")
+    return url
 
 
 def _verify_remote_reachable() -> None:
@@ -193,35 +226,55 @@ def run_rclone_with_retry(
     return result
 
 
-def setup_remote() -> None:
-    """Set up rclone remote configuration.
-
-    Args:
-        dirname: Name of the directory (used for error handling)
-    """
-    log.debug("Setting up rclone remote.")
-    config_params = [
-        "rclone",
-        "config",
-        "create",
-        OBJECT_STORAGE_REMOTE_NAME,
-        "s3",
-        "provider=Other",
-        f"access_key_id={OBJECT_STORAGE_ACCESS_KEY}",
-        f"secret_access_key={OBJECT_STORAGE_SECRET_KEY}",
-        "region=us-east-1",
-        f"endpoint={OBJECT_STORAGE_HOST}",
-        "acl=private",
-        "force_path_style=true",
-    ]
-
+def _rclone_config_path() -> str:
+    """Return the config file rclone reads, whether it exists yet or not."""
+    params = ["rclone", "config", "file"]
     result = subprocess.run(
-        config_params,
+        params,
         capture_output=True,
         text=True,
         timeout=CONTROL_TIMEOUT,
     )
-    check_result(config_params, result)
+    check_result(params, result)
+    # "Configuration file is stored at:" or "Configuration file doesn't exist, but
+    # rclone will use this path:" — the path is the last line either way.
+    return result.stdout.strip().splitlines()[-1]
+
+
+def setup_remote() -> None:
+    """Write the object storage remote into rclone's config file.
+
+    The file is written here instead of through ``rclone config create``, which
+    takes the keys as arguments — and a process's arguments are readable by every
+    user on the host (``ps``, ``/proc/<pid>/cmdline``). The file ends up
+    owner-only, as rclone itself would leave it.
+    """
+    log.debug("Setting up rclone remote.")
+    config_path = _rclone_config_path()
+
+    config = configparser.ConfigParser(interpolation=None)
+    # rclone option names are case-sensitive; configparser lowercases by default.
+    config.optionxform = str
+    config.read(config_path)
+    config[OBJECT_STORAGE_REMOTE_NAME] = {
+        "type": "s3",
+        "provider": "Other",
+        "access_key_id": OBJECT_STORAGE_ACCESS_KEY,
+        "secret_access_key": OBJECT_STORAGE_SECRET_KEY,
+        "region": OBJECT_STORAGE_REGION,
+        "endpoint": OBJECT_STORAGE_HOST,
+        "acl": "private",
+        "force_path_style": "true",
+    }
+
+    config_dir = os.path.dirname(config_path)
+    os.makedirs(config_dir, exist_ok=True)
+    # mkstemp creates the file as 0600. Replaced atomically, because every web
+    # process runs this at import and a reader must never see half a file.
+    fd, tmp_path = tempfile.mkstemp(dir=config_dir, prefix=".rclone.conf.")
+    with os.fdopen(fd, "w") as f_handle:
+        config.write(f_handle)
+    os.replace(tmp_path, config_path)
 
     log.debug(
         f"Successfully created remote {OBJECT_STORAGE_REMOTE_NAME}",
@@ -459,23 +512,19 @@ def create_bucket() -> None:
     log.debug(f"Creating bucket {OBJECT_STORAGE_BUCKET}")
 
     # Check if bucket already exists
-    lsd_params = [
+    lsf_params = [
         "rclone",
-        "lsd",
+        "lsf",
+        "--dirs-only",
         f"{OBJECT_STORAGE_REMOTE_NAME}:",
     ]
 
-    result = run_rclone_with_retry(lsd_params, timeout=CONTROL_TIMEOUT)
+    result = run_rclone_with_retry(lsf_params, timeout=CONTROL_TIMEOUT)
 
-    # Parse output to check if bucket exists
-    # rclone lsd output format: "-1 2023-01-01 12:00:00        -1 bucket-name"
-    bucket_exists = False
-    for line in result.stdout.strip().split("\n"):
-        if line and OBJECT_STORAGE_BUCKET in line:
-            bucket_exists = True
-            break
-
-    if bucket_exists:
+    # One bucket per line with a trailing slash ("cosmo-jobs/"), compared whole:
+    # a substring test took "cosmo-jobs" for present whenever "cosmo-jobs-old" was.
+    buckets = {line.rstrip("/") for line in result.stdout.splitlines()}
+    if OBJECT_STORAGE_BUCKET in buckets:
         return
 
     # Create bucket if it doesn't exist

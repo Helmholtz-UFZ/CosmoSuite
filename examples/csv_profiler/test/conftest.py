@@ -30,6 +30,11 @@ from cosmo_suite.config import (
     REDIS_PORT,
 )
 from cosmo_suite.db_manager import DbManager
+from cosmo_suite.object_storage_manager import (
+    ObjectStorageError,
+    create_bucket,
+    setup_remote,
+)
 
 from csv_profiler.db_manager import JobTable
 
@@ -82,7 +87,7 @@ def pytest_configure(config):
     # Give services a moment to fully initialize after health checks
     time.sleep(4)
 
-    # Check rclone availability and MinIO connectivity
+    # Check rclone availability and object storage connectivity
     try:
         subprocess.run(
             ["rclone", "--version"], check=True, text=True, capture_output=True
@@ -91,17 +96,11 @@ def pytest_configure(config):
         pytest.exit("rclone command not available")
 
     try:
-        from cosmo_suite.object_storage_manager import (
-            ObjectStorageError,
-            create_bucket,
-            setup_remote,
-        )
-
         setup_remote()
         create_bucket()
-        logging.info("rclone MinIO connectivity check passed")
+        logging.info("rclone object storage connectivity check passed")
     except ObjectStorageError as e:
-        pytest.exit(f"MinIO S3 connectivity check failed: {e}")
+        pytest.exit(f"Object storage (S3) connectivity check failed: {e}")
 
     # Validate credentials are test values
     if POSTGRES_PASSWORD != "test" or OBJECT_STORAGE_SECRET_KEY != "secretkey":

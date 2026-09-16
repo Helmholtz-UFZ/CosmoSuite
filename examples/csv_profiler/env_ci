@@ -19,10 +19,10 @@ POSTGRES_DB="cosmo_suite"
 POSTGRES_USER="cosmo_suite_user"
 POSTGRES_PASSWORD="test"
 
-### Minio ###
+### Object storage ###
 OBJECT_STORAGE_ACCESS_KEY="accesskey"
 OBJECT_STORAGE_BUCKET="cosmo-suite-jobs"
-OBJECT_STORAGE_HOST="http://minio:9000"
+OBJECT_STORAGE_HOST="http://object-storage:9000"
 OBJECT_STORAGE_REMOTE_NAME="cosmo-suite-remote"
 OBJECT_STORAGE_SECRET_KEY="secretkey"
 

@@ -5,7 +5,7 @@
 | Suite | Where | How | Services |
 |---|---|---|---|
 | Framework | `test/` at the repo root | `uv run pytest test/` | none |
-| Example (integration + e2e) | `examples/csv_profiler/test/` | `./run_pytest.sh` | postgres, MinIO, redis, a Celery worker |
+| Example (integration + e2e) | `examples/csv_profiler/test/` | `./run_pytest.sh` | postgres, object storage (RustFS), redis, a Celery worker |
 
 Everything below is about the **example** suite unless it says otherwise: it is
 the one with services, fixtures and Playwright, and the one that actually
@@ -15,8 +15,9 @@ The framework suite covers what can be checked without a running stack — stati
 HTML-id enforcement, the release-version places, and the seams the apps depend
 on: `handle_error`'s `on_unhandled` / `error_responses` / `expected_errors`, the
 `BaseJob` contract, the `serve_files` job class, the layout wrapper,
-`create_header`'s optional id, and the navbar-callback registration. It has no
-`run_pytest.sh` and needs none.
+`create_header`'s optional id, the navbar-callback registration, and the parts of
+`object_storage_manager` that need no store (offline presigning, the rclone config
+write, the bucket check). It has no `run_pytest.sh` and needs none.
 
 Two of those are worth naming because they are not tests of behaviour:
 
@@ -63,7 +64,7 @@ All three stacks used to publish the same host ports, so **no two suites could r
 the same time**. Each repo now has its own slot. Canonical source, do not fork it:
 [`docs/plan/local-port-allocation.md`](../plan/local-port-allocation.md).
 
-| | Flask | Postgres | Redis | MinIO | Console |
+| | Flask | Postgres | Redis | Object storage | Console |
 |---|---|---|---|---|---|
 | cosmopolitan | 8080 | 5432 | 6379 | 9000 | 9001 |
 | cosmonaut | 8081 | 5433 | 6380 | 9010 | 9011 |
@@ -78,7 +79,7 @@ Two rules that follow from it:
 
 - **Host port ≠ app-facing port.** `POSTGRES_PORT`, `REDIS_PORT` and
   `OBJECT_STORAGE_HOST` say where the *app* connects. In `env_dev` the app runs inside
-  the compose network and must keep `5432` / `6379` / `minio:9000`; in `env_test` the
+  the compose network and must keep `5432` / `6379` / `object-storage:9000`; in `env_test` the
   suite runs on the host, so there they must match the published ports. Setting a
   service's published port on both sides of a mapping breaks the container, which does
   not listen on the shifted port.
@@ -133,7 +134,7 @@ Both venvs need this after a move: the framework root and
 
 - Use Playwright via `pytest-playwright` (`page` fixture)
 - App served by `dash_app` fixture (werkzeug make_server in background thread)
-- Require all services: Postgres, Redis, MinIO, Celery worker
+- Require all services: Postgres, Redis, object storage, Celery worker
 - Test full user workflows through the browser
 - Reusable helpers in `test/help_functions_tests.py`
 
