@@ -40,7 +40,7 @@ way `dash_form_factory` is already shared across the suite:
 ```toml
 [project]
 dependencies = [
-    "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.8.0",
+    "cosmo-suite @ git+https://codebase.helmholtz.cloud/.../cosmo-suite@v0.8.1",
 ]
 
 [tool.hatch.metadata]

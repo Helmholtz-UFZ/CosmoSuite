@@ -166,7 +166,10 @@ class PostgreSQLHandler(logging.Handler):
 
 
 # Packages every consumer inherits: framework-level noise, nothing domain-specific.
-DEFAULT_EXCLUDED_PACKAGES = ("watchdog", "selenium")
+# boto3/botocore/s3transfer arrive with object_storage_manager's presigning. At
+# DEBUG botocore writes ~60 records per signed URL, one of them the signature —
+# enough to rebuild a working download link from the logs page.
+DEFAULT_EXCLUDED_PACKAGES = ("watchdog", "selenium", "boto3", "botocore", "s3transfer")
 EXCLUDED_MODULES = ("_internal",)
 
 

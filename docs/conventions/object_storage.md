@@ -126,6 +126,10 @@ image differ.
 - **Presigned URLs expire after at most seven days.** `get_presigned_download_url`
   raises `ValueError` beyond that. boto3 would sign the URL anyway, and it would
   fail only when someone uses it.
+- **botocore must stay out of the logs.** At DEBUG it writes about 60 records per
+  signed URL, the signature among them — enough to rebuild a working link from the
+  logs page. `cosmo_suite.logger` mutes `boto3`, `botocore` and `s3transfer` for
+  every consumer; v0.8.0 shipped without that.
 - **URLs signed in a local run point at `localhost`**, so a phone scanning the QR
   code cannot reach them. That is expected.
 - **The include `ref` and the pyproject pin can drift apart.** The only effect is a
