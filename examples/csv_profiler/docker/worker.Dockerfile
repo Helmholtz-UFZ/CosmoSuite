@@ -55,12 +55,16 @@ USER appuser
 # below is a string no linter reads, and no suite starts the worker through this
 # image — both use `uv run celery`. The `exec celery` marker is what lets a build
 # job run the setup step on its own; see docs/conventions/worker_image.md.
+# --beat embeds the Celery Beat scheduler. It belongs here and not in the web
+# process (see app.py), and it relies on there being exactly one worker container:
+# a second replica would run every scheduled task twice.
 CMD echo "Starting Celery worker..." && \
     python3 /python_docker/cosmo_suite/cosmo_suite/object_storage_manager.py setup_remote && \
     exec celery -A csv_profiler.celery_app.celery worker \
         --loglevel=debug \
         --concurrency=4 \
         --queues=default,computation,maintenance \
+        --beat \
         --hostname=worker@%h \
         --without-gossip \
         --without-mingle;

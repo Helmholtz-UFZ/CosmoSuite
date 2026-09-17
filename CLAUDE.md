@@ -118,6 +118,7 @@ For specific implementation details, see:
 - [Framework Page Imports](docs/conventions/framework_page_imports.md) - What a consumer inherits by importing a page, and how it fails silently
 - [Database Schema](docs/conventions/database_schema.md) - Shared `Base`, the `JobColumns` intersection mixin, DDL ownership
 - [Object Storage](docs/conventions/object_storage.md) - The S3 server for dev/CI, the shared CI template, wiring up an app, swapping the server
+- [Celery Beat](docs/conventions/celery_beat.md) - Beat runs in the worker (`--beat`), never as a thread in `app.py` — fork deadlock / duplicate schedules
 - [Worker Image](docs/conventions/worker_image.md) - The Dockerfile `CMD` seam, why `&&` not `;`, and the smoke test that belongs in the apps
 
 **Important** read the convention before you make any codebase exploration or answering.

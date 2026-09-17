@@ -10,12 +10,10 @@ management, worker management) are imported explicitly so they register too.
 import logging
 import logging.config
 from importlib.metadata import version
-from threading import Thread
 
 import dash_bootstrap_components as dbc
 from dash import Dash
 
-from cosmo_suite.background_job_manager import background_job_manager
 from cosmo_suite.config import DEBUG, PORT
 from cosmo_suite.db_manager import DbManager
 from cosmo_suite.error_handling import handle_error
@@ -64,21 +62,16 @@ import cosmo_suite.pages.logs  # noqa: E402, F401
 import cosmo_suite.pages.job_management  # noqa: E402, F401
 import cosmo_suite.pages.worker_management  # noqa: E402, F401
 
-# Set up object storage and start the Celery Beat scheduler.
+# Set up object storage.
 setup_remote()
 create_bucket()
 
-
-def start_beat_scheduler():
-    """Start Celery Beat scheduler with thread-specific logging."""
-    beat = background_job_manager.app.Beat(loglevel="DEBUG")
-    beat.run()
-
-
-# Start Beat scheduler as daemon thread
-beat_thread = Thread(target=start_beat_scheduler, daemon=True)
-beat_thread.start()
-log.info("Celery Beat scheduler started in background thread")
+# No Celery Beat here: it runs embedded in the worker (docker/worker.Dockerfile).
+# Gunicorn with --preload imports this module once and then forks its workers; a
+# thread started at import can hold one of Celery's internal locks at that moment,
+# and the forked worker then blocks forever on its first task submission. Without
+# --preload every worker would start its own Beat instead, and every scheduled task
+# would run once per worker. See docs/conventions/celery_beat.md in cosmo-suite.
 
 # Serve files
 serve_files(app)
