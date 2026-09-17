@@ -9,6 +9,13 @@ repo-übergreifend und darf nur **eine** Quelle haben)
 > `OBJECT_STORAGE_CONSOLE_HOST_PORT` (vorher `MINIO_HOST_PORT` bzw. in cosmonaut
 > `OBJECT_STORAGE_PORT`). §0–§2 geben den damals gemessenen Stand wieder. Siehe
 > [`object_storage.md`](../conventions/object_storage.md).
+>
+> **Nachtrag 2026-09-17:** §3 ist jetzt in allen drei Repos umgesetzt — auch
+> cosmopolitan (Flask, Postgres, Redis, Tileserver) und cosmonaut (Postgres, Redis)
+> lesen `${…_HOST_PORT:-<Default>}`. Nachgewiesen per `docker compose config`: für jede
+> env-Datei dieselben aufgelösten Mappings wie vorher. In cosmonaut (`network_mode:
+> host`) müssen `POSTGRES_HOST_PORT` / `REDIS_HOST_PORT` gleich `POSTGRES_PORT` /
+> `REDIS_PORT` sein.
 
 ---
 
